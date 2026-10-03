@@ -1,0 +1,84 @@
+import { defineStore } from 'pinia';
+import request from '@/utils/request';
+
+export const useUserStore = defineStore('user', {
+  state: () => ({
+    token: localStorage.getItem('tb_token') || '',
+    username: localStorage.getItem('tb_username') || '',
+    id: localStorage.getItem('tb_id') || '',
+    avatar: localStorage.getItem('tb_avatar') || ''
+  }),
+  getters: {
+    isLogin: (s) => !!s.token
+  },
+  actions: {
+    async login(username, password) {
+      const data = await request.post('/user/login', { username, password });
+      this.token = data.token;
+      this.username = data.username;
+      this.id = data.id;
+      localStorage.setItem('tb_token', data.token);
+      localStorage.setItem('tb_username', data.username);
+      localStorage.setItem('tb_id', data.id);
+      return data;
+    },
+    async register(username, password) {
+      return await request.post('/user/register', { username, password });
+    },
+    // 手机号 + 验证码：注册过直接登录，没注册过服务端自动建号
+    async smsLogin(phone, code) {
+      const data = await request.post('/user/sms-login', { phone, code });
+      this.token = data.token;
+      this.username = data.username;
+      this.id = data.id;
+      localStorage.setItem('tb_token', data.token);
+      localStorage.setItem('tb_username', data.username);
+      localStorage.setItem('tb_id', data.id);
+      return data;
+    },
+    // 一键登录：本机号码直接进，没注册过服务端自动开号（不校验验证码）
+    async quickLogin(phone) {
+      const data = await request.post('/user/quick-login', { phone });
+      this.token = data.token;
+      this.username = data.username;
+      this.id = data.id;
+      localStorage.setItem('tb_token', data.token);
+      localStorage.setItem('tb_username', data.username);
+      localStorage.setItem('tb_id', data.id);
+      return data;
+    },
+    // 忘记密码：验过手机号 + 验证码后直接改密码
+    async resetPassword(phone, code, password) {
+      return await request.post('/user/reset-password', { phone, code, password });
+    },
+    // 本地演示会话：后端未起 / 演示环境直接落一个 token，页面链路照样能点
+    setSession(token, username, id) {
+      this.token = token;
+      this.username = username;
+      this.id = id;
+      localStorage.setItem('tb_token', token);
+      localStorage.setItem('tb_username', username);
+      localStorage.setItem('tb_id', id);
+    },
+    // 改用户名（「我的 → 账号设置」里自己改，不在登录流程里绕）
+    setUsername(name) {
+      this.username = name;
+      localStorage.setItem('tb_username', name);
+    },
+    // 换头像：服务端落盘后拿回 /files/xxx 的绝对路径
+    setAvatar(url) {
+      this.avatar = url || '';
+      localStorage.setItem('tb_avatar', url || '');
+    },
+    logout() {
+      this.token = '';
+      this.username = '';
+      this.id = '';
+      this.avatar = '';
+      localStorage.removeItem('tb_token');
+      localStorage.removeItem('tb_username');
+      localStorage.removeItem('tb_id');
+      localStorage.removeItem('tb_avatar');
+    }
+  }
+});

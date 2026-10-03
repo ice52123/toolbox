@@ -1,0 +1,147 @@
+/* ============================================================
+   ui.module.less —— CSS Modules 共享原子类（页面的「第一层样式」）
+   用法：<style module lang="less"> 里写 :class="$style.card"，
+        再叠加本组件的局部类 :class="[$style.card, $style.cell]"。
+   这里只写「各页面长得一样」的那部分（卡片 / 区块头 / 列表行 / 空态），
+   页面特有的间距、断点留在组件自己的 <style module lang="less"> 里 —— 两层职责分开，
+   既不会每个页面抄一遍，也不会把组件改成一句样式都调不动。
+
+   composes: xxx from global —— 复用 utilities.css / utilities.less 里的全局原子类，
+   视觉只有一份来源（改一处，全站生效）。
+   ⚠️ 两个限制，改动前先记住：
+   1. composes 只能写在**顶层**规则里，不能塞进 mixin（CSS Modules 的硬性要求）；
+   2. composes 只能出现在「没有自身声明」的类上，一旦这个 body 里写了别的 CSS，
+      composes 依然生效但要小心重复（本项目这些类都只有 composes + 一个覆盖色）。
+   ============================================================ */
+@import './mixins.less';
+
+/* —— 卡片 —— */
+.card {
+  composes: tb-card from global;
+}
+
+/* —— 区块头：「我的发布 3」/「工具箱 42」—— */
+.head {
+  composes: tb-h from global;
+}
+
+/* —— 区块头右侧文字链 —— */
+.headMore {
+  composes: tb-h-more from global;
+}
+
+/* —— 状态胶囊（订单 / 进度小标签）—— */
+.pill {
+  composes: tb-pill from global;
+}
+.pillOk {
+  composes: tb-pill from global;
+  color: var(--tb-ok);
+  background: var(--tb-ok-soft);
+}
+.pillWarn {
+  composes: tb-pill from global;
+  color: var(--tb-warn);
+  background: var(--tb-warn-soft);
+}
+.pillMute {
+  composes: tb-pill from global;
+  color: var(--tb-mute);
+  background: var(--tb-mute-soft);
+}
+
+/* —— 列表行 + 行内图标 + 两行文字 —— */
+.row {
+  composes: tb-row from global;
+}
+.rowIco {
+  composes: tb-ico from global;
+}
+.rowMain {
+  composes: tb-row-main from global;
+}
+.rowTitle {
+  composes: tb-row-title from global;
+}
+.rowSub {
+  composes: tb-row-sub from global;
+}
+
+/* —— 方角次要按钮（「获取验证码 / 去发布 / 用本机号」共用一款）—— */
+.btn {
+  composes: tb-btn from global;
+}
+.btnSm {
+  composes: tb-btn-sm from global;
+}
+/* 主操作（发帖「发布」）：同尺寸、换实心填充。必须排在 .btn 后面 —— 两者同权重，
+   谁在后谁生效，排反了主按钮会退化成淡底 */
+.btnMain {
+  composes: tb-btn from global;
+  background: linear-gradient(135deg, var(--tb-primary), var(--tb-secondary));
+  color: @c-white;
+  box-shadow: 0 6px 18px var(--tb-primary-ring);
+
+  &:hover {
+    background: linear-gradient(135deg, var(--tb-primary), var(--tb-secondary));
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px var(--tb-primary-ring);
+  }
+}
+
+/* —— 内嵌浅底槽 —— */
+.inset {
+  composes: tb-inset from global;
+}
+
+/* —— 空态 / 提示 —— */
+.empty {
+  composes: tb-empty from global;
+}
+.tips {
+  composes: tb-tips from global;
+}
+.mini {
+  composes: tb-mini from global;
+}
+
+/* —— 胶囊选择器（分类 pill 的两种状态分开写，激活态只加一层投影 —— */
+.chip {
+  composes: tb-chip from global;
+}
+.chipOn {
+  composes: tb-chip from global;
+  color: @c-white;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--tb-primary), var(--tb-secondary));
+  box-shadow: @shadow-grad;
+  font-weight: 600;
+}
+
+/* —— 工具卡（共享原子类）—— */
+.tool {
+  composes: tb-tool from global;
+}
+.toolIco {
+  composes: tb-tool-ico from global;
+}
+.toolName {
+  composes: tb-tool-name from global;
+}
+.toolDesc {
+  composes: tb-tool-desc from global;
+}
+.toolBadge {
+  composes: tb-tool-badge from global;
+}
+
+/* —— 容器 —— */
+.page {
+  composes: tb-page from global;
+}
+.stack {
+  composes: tb-stack from global;
+}
+.grid3 {
+  composes: tb-cols-3 from global;
+}

@@ -1,0 +1,24 @@
+{
+  "name": "idle-market",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.12",
+    "element-plus": "^2.7.0",
+    "less": "^4.9.1",
+    "pinia": "^2.1.0",
+    "vite-plugin-qiankun": "^1.0.15",
+    "vue": "^3.4.0",
+    "vue-router": "^4.3.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.0",
+    "vite": "^5.4.0"
+  }
+}

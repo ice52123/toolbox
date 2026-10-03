@@ -1,0 +1,212 @@
+/* ============================================================
+   mixins.less —— 全站复用片段（只在这里定义，不产出任何 CSS）
+   ------------------------------------------------------------
+   用法：在 .vue 的 <style lang="less"> 里 @import '@/styles/mixins.less';
+   注意两点：
+   1. mixin 里可以写 var(--tb-xxx)，因为它最终是 CSS 声明，
+      主题切换照样跟着变（只在这里写死颜色才会有暗色下失效的问题）。
+   2. 「composes」不能放进 mixin —— CSS Modules 要求它必须写在顶层规则里。
+   ============================================================ */
+@import './tokens.less';
+
+/* —— 断点 mixin：传一段「脱离的规则集」进来，在媒体查询里展开 ——
+   调用写法（注意是圆括号包大括号，结尾分号不能少）：
+     .chip { color: red; .m-sm({ color: blue; }); }
+   这是 Less 里唯一能「把一段规则塞进 media」的写法，别改成直接写 @media。 */
+.m-sm(@rules) {
+  @media (max-width: @bp-sm) {
+    @rules();
+  }
+}
+.m-md(@rules) {
+  @media (max-width: @bp-md) {
+    @rules();
+  }
+}
+.m-xs(@rules) {
+  @media (max-width: @bp-xs) {
+    @rules();
+  }
+}
+/* 超窄屏（≤430，iPhone SE 那一档）：标题行挤了先让位 */
+.m-phone(@rules) {
+  @media (max-width: @bp-phone) {
+    @rules();
+  }
+}
+
+/* —— 文本截断 —— */
+.ellipsis-one() {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.clamp(@n: 2) {
+  display: -webkit-box;
+  -webkit-line-clamp: @n;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* —— 卡片外观（= utilities.css 里 .tb-card 的那套，页面里直接调）—— */
+.card-surface() {
+  background: var(--tb-card);
+  border: 1px solid var(--tb-line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--tb-shadow);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: var(--tb-pad);
+}
+
+/* —— 品牌渐变（换主色靠 CSS 变量，这里不写死色）—— */
+.grad-brand() {
+  background: linear-gradient(135deg, var(--tb-primary), var(--tb-secondary));
+}
+.grad-text() {
+  background: var(--tb-gradient-text, linear-gradient(120deg, @c-brand, @c-brand-2 45%, @c-cyan));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* —— 按钮骨架：传高度即可，差别只在尺寸 —— */
+.btn-base(@h: @h-btn, @fs: 13.5px) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: @h;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: @r-xs;
+  background: var(--tb-primary-soft);
+  color: var(--tb-primary);
+  font-size: @fs;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background @t-fast, border-color @t-fast, color @t-fast;
+  &:hover {
+    background: var(--tb-primary-soft-2, rgba(124, 58, 237, 0.2));
+    border-color: var(--tb-primary);
+  }
+}
+.btn-ghost(@h: @h-btn, @fs: 13.5px) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: @h;
+  padding: 0 16px;
+  border: 1px solid var(--tb-line);
+  border-radius: @r-xs;
+  background: transparent;
+  color: var(--tb-sub);
+  font-size: @fs;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background @t-fast, border-color @t-fast, color @t-fast;
+  &:hover {
+    color: var(--tb-primary);
+    border-color: var(--tb-primary);
+    background: var(--tb-primary-soft);
+  }
+}
+/* 实心主按钮：先用 .btn-base 铺骨架，再用 &{} 覆盖配色。
+   整体包在 &{} 里是必须的 —— 直接平铺会和 base 的 hover 撞成两条，
+   前后两条 :hover 同权重，读代码的人很容易以为「到底谁生效」。 */
+.btn-solid(@h: @h-btn, @fs: 13.5px) {
+  .btn-base(@h, @fs);
+  & {
+    background: linear-gradient(135deg, var(--tb-primary), var(--tb-secondary));
+    color: @c-white;
+    box-shadow: 0 6px 18px var(--tb-primary-ring);
+  }
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px var(--tb-primary-ring);
+  }
+}
+
+/* —— 方形图标底（列表行 / 工具卡的 36px、44px 圆角块）—— */
+.icon-box(@size: 36px, @r: @r-sm) {
+  width: @size;
+  height: @size;
+  flex: 0 0 @size;
+  border-radius: @r;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, @ico-bg-a, @ico-bg-b);
+}
+
+/* —— 聚焦环（Element 默认蓝圈换品牌色）—— */
+.focus-ring() {
+  &:focus-within,
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 1.5px var(--tb-primary);
+  }
+}
+
+/* —— 内嵌浅底槽 —— */
+.inset-box() {
+  padding: 14px;
+  border-radius: @r-md;
+  background: var(--tb-primary-soft-2, rgba(124, 58, 237, 0.06));
+  border: 1px solid var(--tb-line);
+}
+
+/* —— 状态胶囊 —— */
+.pill(@c: var(--tb-primary), @bg: var(--tb-primary-soft)) {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border-radius: @r-pill;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: @c;
+  background: @bg;
+}
+
+/* —— 横向滚动条容器（分类条）—— */
+.scroll-x() {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* —— 居中 —— */
+.flex-center() {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.flex-between() {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* —— 一行三块 / 两块的网格 —— */
+.cols-3() {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--tb-gap);
+  align-items: start;
+}
+/* —— 隐藏滚动条但保留滚动 —— */
+.no-scrollbar() {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

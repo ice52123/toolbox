@@ -1,0 +1,15 @@
+* { box-sizing: border-box; }
+
+/* 样式收窄到自身容器 .im，避免内嵌时用 body 等全局选择器污染主应用 toolbox */
+.im {
+  min-height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: #221f33;
+}
+
+/* 仅当独立运行（直接打开 4200）时才给 body 上背景，内嵌时由主应用接管 */
+body.idle-standalone {
+  margin: 0;
+  background: linear-gradient(135deg, #f6f4ff 0%, #eef4ff 100%);
+  min-height: 100vh;
+}

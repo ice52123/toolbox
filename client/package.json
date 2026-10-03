@@ -1,0 +1,29 @@
+{
+  "name": "toolbox-client",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "dev:all": "node scripts/start-dev.mjs",
+    "dev:daemon": "node scripts/start-dev.mjs --daemon",
+    "audit:components": "node scripts/audit-components.mjs"
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.3.1",
+    "axios": "^1.7.7",
+    "element-plus": "^2.8.4",
+    "less": "^4.9.1",
+    "pdf-lib": "^1.17.1",
+    "pinia": "^2.2.4",
+    "qiankun": "^2.10.16",
+    "solarlunar": "^3.1.0",
+    "vue": "^3.5.12",
+    "vue-router": "^4.4.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.1.4",
+    "vite": "^5.4.9"
+  }
+}

@@ -1,0 +1,53 @@
+/* ============================================================
+   index.less —— 全局样式唯一入口（main.js 只 import 这一个）
+   ------------------------------------------------------------
+   顺序不能动：variables（运行时变量）→ base（重置）→ utilities（原子类）
+   这里用 Less 的 @import（编译期内联，不是运行时再发一次 CSS @import），
+   好处是顺序在构建期就定死了，不会出现「变量还没定义就被引用」的裸奔。
+   ============================================================ */
+@import './variables.less';
+@import './base.less';
+@import './utilities.less';
+
+/* —— Element Plus 主色：跟 --tb-primary 走，换主色时不用动组件 —— */
+:root {
+  --el-color-primary: #7c3aed;
+  --el-color-primary-light-3: #a78bfa;
+  --el-color-primary-light-5: #c4b5fd;
+  --el-color-primary-light-7: #ddd6fe;
+  --el-color-primary-light-8: #ede9fe;
+  --el-color-primary-light-9: #f5f3ff;
+  --el-color-primary-dark-2: #6d28d9;
+}
+html.dark {
+  --el-color-primary: #8b5cf6;
+  --el-color-primary-light-3: #7c6cf0;
+  --el-color-primary-light-5: #6b5ce0;
+  --el-color-primary-light-7: #3a3358;
+  --el-color-primary-light-8: #2c2748;
+  --el-color-primary-light-9: #211d38;
+  --el-color-primary-dark-2: #a78bfa;
+}
+
+/* 亮色下的背景层（单独放这里，因为 variables 里的 @media 会重写 --tb-bg） */
+:root {
+  --tb-bg:
+    radial-gradient(circle at 12% 16%, rgba(124, 58, 237, 0.18), transparent 40%),
+    radial-gradient(circle at 88% 22%, rgba(14, 165, 233, 0.16), transparent 42%),
+    radial-gradient(circle at 50% 96%, rgba(236, 72, 153, 0.14), transparent 46%),
+    linear-gradient(135deg, #f6f4ff 0%, #eef4ff 100%);
+}
+html.dark {
+  --tb-bg:
+    radial-gradient(circle at 12% 16%, rgba(124, 58, 237, 0.42), transparent 42%),
+    radial-gradient(circle at 88% 22%, rgba(14, 165, 233, 0.34), transparent 44%),
+    radial-gradient(circle at 50% 96%, rgba(236, 72, 153, 0.30), transparent 48%),
+    linear-gradient(135deg, #0b1020 0%, #191334 100%);
+}
+
+/* 移动端默认字号再收一档，避免表格 / 弹窗顶到边 */
+@media (max-width: 900px) {
+  body {
+    font-size: 14px;
+  }
+}

@@ -1,0 +1,76 @@
+/* ============================================================
+   base.less —— 重置 + 全局基调（body / 滚动条 / 渐变文字）
+   ============================================================ */
+@import './mixins.less';
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: @ff-base;
+  background: var(--tb-bg);
+  background-attachment: fixed;
+  color: var(--tb-text);
+  min-height: 100vh;
+  transition: background @t-slow ease, color @t-base ease;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0 0 8px;
+  line-height: 1.35;
+}
+
+p {
+  margin: 0 0 10px;
+}
+
+a {
+  color: var(--tb-primary);
+  text-decoration: none;
+}
+
+/* 锚点跳转（公告条等）别被吸顶头部盖住 */
+section[id],
+div[id] {
+  scroll-margin-top: 90px;
+}
+
+/* —— 滚动条：细、圆角、hover 加深 —— */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--tb-primary-soft) transparent;
+}
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--tb-primary-soft);
+  border-radius: var(--tb-radius-pill);
+  border: 2px solid transparent;
+  background-clip: content-box;
+
+  &:hover {
+    background: var(--tb-primary-ring-soft);
+    background-clip: content-box;
+  }
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}

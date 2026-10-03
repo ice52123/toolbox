@@ -1,0 +1,102 @@
+/* ============================================================
+   variables.less —— 运行时 CSS 变量（全站唯一来源，浏览器里实时生效）
+   ------------------------------------------------------------
+   【跟 tokens.less 的分工】
+   这个文件里的 --tb-* 是「运行时」的：theme store 会在浏览器里改
+   document.documentElement 上的值（换主色 / 切亮暗），所以
+   **凡是会跟主题变化的颜色，页面里一律写 var(--tb-xxx)，不许写死**。
+   编译期常量（断点、固定尺寸、与主题无关的固定色）在 tokens.less，用 @ 前缀。
+
+   换主色 / 换亮暗只需要改这一个文件。
+   ============================================================ */
+:root {
+  /* —— 品牌（theme store 换主色时会覆写 --tb-primary / --tb-secondary）—— */
+  --tb-primary: #7c3aed;
+  --tb-secondary: #ec4899;
+  --tb-primary-ring: rgba(124, 58, 237, 0.32);
+  --tb-primary-ring-soft: rgba(124, 58, 237, 0.16);
+  --tb-primary-soft: rgba(124, 58, 237, 0.12);
+  /* 兼容旧写法：有些页面还在写 --tb-primary-soft-2 当「更淡一层」的底 */
+  --tb-primary-soft-2: rgba(124, 58, 237, 0.06);
+  --tb-primary-hover: rgba(109, 93, 252, 0.12);
+
+  /* —— 状态色（订单胶囊 / 进度类小标签）—— */
+  --tb-ok: #10b981;
+  --tb-ok-soft: rgba(16, 185, 129, 0.14);
+  --tb-warn: #f59e0b;
+  --tb-warn-soft: rgba(245, 158, 11, 0.16);
+  --tb-mute: #8b85a3;
+  --tb-mute-soft: rgba(139, 133, 163, 0.14);
+
+  /* —— 文字 / 背景 —— */
+  --tb-text: #221f33;
+  --tb-sub: #6b6480;
+  --tb-card: rgba(255, 255, 255, 0.72);
+  --tb-surface: rgba(255, 255, 255, 0.72); /* 输入框、头像等比表面色 */
+  --tb-gradient-text: linear-gradient(120deg, #7c3aed, #ec4899 45%, #0ea5e9);
+
+  /* —— 描边 / 分隔线 —— */
+  --tb-line: rgba(124, 58, 237, 0.14);
+  --tb-line-soft: rgba(124, 58, 237, 0.1);
+  --tb-line-dashed: rgba(124, 58, 237, 0.1);
+
+  /* —— 形状 —— */
+  --tb-radius: 18px;
+  --tb-radius-sm: 12px;
+  --tb-radius-pill: 999px;
+  --tb-shadow: 0 12px 32px rgba(80, 40, 160, 0.12);
+
+  /* —— 间距（页面里优先用这几个，别随手写 16px/18px）—— */
+  --tb-gap: 16px;
+  --tb-gap-sm: 10px;
+  --tb-pad: 18px 22px;
+  --tb-pad-sm: 16px 18px;
+
+  /* —— 布局高度基准：子应用（qiankun / iframe）靠它算自身高度 —— */
+  --tb-header-h: 92px;
+  --tb-tabbar-h: 0px;
+  --tb-max-w: 1240px;
+
+  /* —— 工具卡尺寸（个别页面想微调只改这几个，不用重写整套）—— */
+  --tb-tool-h: 118px;
+  --tb-tool-ico: 44px;
+  --tb-tool-ico-r: 13px;
+  --tb-tool-name: 14px;
+}
+
+/* 移动端断点（900px 是整套「紧凑头部 + 底部 tab」的分界） */
+@media (max-width: 900px) {
+  :root {
+    --tb-header-h: 96px;
+    --tb-tabbar-h: 56px;
+    --tb-pad: 14px 15px;
+    --tb-pad-sm: 13px 14px;
+  }
+}
+
+/* 深色：只覆写变量，所有页面自动跟随（不重复写一遍媒体查询） */
+html.dark {
+  --tb-primary-ring: rgba(139, 92, 246, 0.42);
+  --tb-primary-ring-soft: rgba(139, 92, 246, 0.28);
+  --tb-primary-soft: rgba(139, 92, 246, 0.18);
+  --tb-primary-soft-2: rgba(139, 92, 246, 0.1);
+  --tb-primary-hover: rgba(139, 92, 246, 0.16);
+
+  --tb-ok: #34d399;
+  --tb-ok-soft: rgba(52, 211, 153, 0.2);
+  --tb-warn: #fbbf24;
+  --tb-warn-soft: rgba(251, 191, 36, 0.2);
+  --tb-mute: #a9a6c0;
+  --tb-mute-soft: rgba(169, 166, 192, 0.2);
+
+  --tb-text: #eef0f7;
+  --tb-sub: #a9a6c0;
+  --tb-card: rgba(23, 27, 46, 0.55);
+  --tb-surface: rgba(255, 255, 255, 0.06);
+
+  --tb-line: rgba(148, 130, 255, 0.22);
+  --tb-line-soft: rgba(148, 130, 255, 0.14);
+  --tb-line-dashed: rgba(148, 130, 255, 0.14);
+
+  --tb-shadow: 0 14px 38px rgba(0, 0, 0, 0.55);
+}

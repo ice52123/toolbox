@@ -1,0 +1,297 @@
+/* ============================================================
+   utilities.less —— 跨页面复用的「原子类」（全局，不是 module）
+   ------------------------------------------------------------
+   页面里重复的卡片 / 列表行 / 空态 / 分段头 全部收敛到这里，
+   以后调视觉只改这一处，不用去 20 个 .vue 里逐页找。
+   骨架（卡片底色、按钮、胶囊、图标底）已经沉到 mixins.less，
+   这里只负责「哪些元素长这样」的组装，重复的声明一次都别抄。
+   ============================================================ */
+@import './mixins.less';
+
+/* —— 容器 —— */
+.tb-page {
+  max-width: 1140px;
+}
+.tb-page-wide {
+  max-width: var(--tb-max-w);
+}
+
+/* —— 卡片 —— */
+.tb-card {
+  .card-surface();
+}
+/* 同层多张卡之间统一间距（grid 场景用 .tb-gap 容器，这里给非 grid 兜底） */
+.tb-stack > * + * {
+  margin-top: var(--tb-gap);
+}
+
+.tb-pad-sm {
+  padding: var(--tb-pad-sm);
+}
+
+/* —— 区块标题（「我的发布 3」那种一行，左右分布）—— */
+.tb-h {
+  .flex-between();
+  gap: 10px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--tb-line);
+
+  > span {
+    min-width: 0;
+  }
+  b {
+    color: var(--tb-primary);
+    font-size: 16px;
+  }
+}
+
+/* —— 列表行（左侧图标 + 中间两行文字 + 右侧标签）—— */
+.tb-row {
+  .flex-center();
+  gap: var(--tb-gap-sm);
+  padding: 9px 0;
+
+  /* 行间隔线：软实线（虚线在半透明卡片上会显脏），最后一行不拖线到卡片底边 */
+  & + & {
+    border-top: 1px solid var(--tb-line-soft);
+  }
+}
+
+/* 行中间的文字区：名称一行截断、副标题更小更淡 */
+.tb-row-main {
+  flex: 1;
+  min-width: 0;
+}
+.tb-row-title {
+  font-size: 13px;
+  font-weight: 600;
+  .ellipsis-one();
+}
+.tb-row-sub {
+  font-size: 11px;
+  color: var(--tb-sub);
+  margin-top: 3px;
+}
+
+/* 区块头右侧文字链「全部 ›」：比一个按钮轻，空态 / 有数都能挂同一个 */
+.tb-h-more {
+  .flex-center();
+  gap: 3px;
+  padding: 4px 9px 4px 10px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit; /* 浏览器默认 button 字体不继承，不写这条中文字体会变默认衬线 */
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tb-sub);
+  border-radius: var(--tb-radius-pill);
+  transition: color @t-fast, background @t-fast;
+
+  &:hover {
+    color: var(--tb-primary);
+    background: var(--tb-primary-soft);
+  }
+}
+
+/* —— 状态胶囊（订单「待收货 / 已完成」那类小标签，比 el-tag 轻）—— */
+.tb-pill {
+  .pill();
+  &.ok {
+    color: var(--tb-ok);
+    background: var(--tb-ok-soft);
+  }
+  &.warn {
+    color: var(--tb-warn);
+    background: var(--tb-warn-soft);
+  }
+  &.mute {
+    color: var(--tb-mute);
+    background: var(--tb-mute-soft);
+  }
+}
+
+/* —— 方角次要按钮（「获取验证码」「去发布」「用本机号」都是这一款）——
+   以前各处各写：有的是胶囊、有的是方角、高度还跟输入框差几像素，
+   现在统一成「40~44px 高 + 10px 方角 + 品牌淡底」，和邻排输入框一眼能对齐 */
+.tb-btn {
+  .btn-base();
+}
+/* 行内小号：空态那一行用不上 44px，缩到 32px 但圆角保持一致 */
+.tb-btn-sm {
+  .btn-base(@h-btn-sm, 12.5px);
+}
+
+/* —— 内嵌底：卡片里再套一层的浅色槽（空态、分段控件都用它）—— */
+.tb-inset {
+  .inset-box();
+}
+
+/* —— 空态 —— */
+.tb-empty {
+  text-align: center;
+  padding: 26px 0;
+  color: var(--tb-sub);
+
+  p {
+    margin: 0 0 10px;
+    font-size: 13px;
+  }
+}
+
+/* —— 提示小字 —— */
+.tb-tips {
+  font-size: 12px;
+  color: var(--tb-sub);
+  line-height: 1.7;
+}
+.tb-mini {
+  font-size: 12.5px;
+  color: var(--tb-sub);
+}
+.tb-xs {
+  font-size: 11px;
+  color: var(--tb-sub);
+}
+
+/* —— 胶囊 / 分段选择器（工具分类那条 pill）—— */
+.tb-chip {
+  .flex-center();
+  flex: 0 0 auto;
+  padding: 7px 15px;
+  border-radius: var(--tb-radius-pill);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--tb-sub);
+  border: 1px solid var(--tb-line);
+  background: transparent;
+  transition: color @t-fast, border-color @t-fast, background @t-fast;
+  white-space: nowrap;
+
+  &:hover {
+    color: var(--tb-primary);
+    border-color: var(--tb-primary);
+  }
+  /* 激活态只加一层投影，底色交给渐变 */
+  &.on {
+    color: @c-white;
+    border-color: transparent;
+    .grad-brand();
+    box-shadow: @shadow-grad;
+    font-weight: 600;
+  }
+}
+
+/* 一行横向滚动的分类条（窄屏不折行） */
+.tb-scroll-x {
+  .scroll-x();
+}
+
+/* —— 渐变文字（换主色时 theme store 覆写 --tb-gradient-text 变量）—— */
+.tb-gradient-text {
+  .grad-text();
+}
+
+/* —— 按钮组（居中一行）—— */
+.tb-btns {
+  .flex-center();
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* —— 工具卡：首页推荐位 + 工具全量页共用同一套外观（以前两处各抄一份）——
+   尺寸走 CSS 变量，个别页面想微调只改 --tb-tool-* 就行，不用重写整套 */
+.tb-tool {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--tb-tool-h);
+  padding: 14px 12px;
+  cursor: pointer;
+  text-align: center;
+  position: relative;
+  transition: transform @t-base ease, box-shadow @t-base ease,
+    border-color @t-base ease;
+
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: @shadow-hover;
+    border-color: var(--tb-primary);
+  }
+}
+.tb-tool-ico {
+  width: var(--tb-tool-ico);
+  height: var(--tb-tool-ico);
+  border-radius: var(--tb-tool-ico-r);
+  .flex-center();
+  color: @c-white;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
+}
+/* 名称固定行高、最多两行 —— 长短名字都不会让同一行的图标上下错位 */
+.tb-tool-name {
+  font-weight: 600;
+  font-size: var(--tb-tool-name);
+  line-height: 18px;
+  min-height: 18px;
+  max-height: 36px;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+/* 描述永远占两行，卡片底边齐平 */
+.tb-tool-desc {
+  font-size: 12px;
+  color: var(--tb-sub);
+  line-height: 1.35;
+  .clamp(2);
+  min-height: 32px;
+}
+.tb-tool-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+/* —— 一行三块（卡片网格）—— */
+.tb-cols-3 {
+  .cols-3();
+}
+
+/* —— 移动端：把「一行三块」压成竖排；工具卡整体缩一档 —— */
+@media (max-width: 1000px) {
+  .tb-cols-3 {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 900px) {
+  .tb-card {
+    padding: var(--tb-pad);
+  }
+  .tb-row {
+    padding: 8px 0;
+  }
+  .tb-tool {
+    --tb-tool-h: 100px;
+    padding: 11px 7px;
+  }
+  .tb-tool-ico {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+  }
+  .tb-tool-name {
+    font-size: 12.5px;
+    line-height: 16px;
+    min-height: 16px;
+  }
+  .tb-tool-desc {
+    font-size: 11px;
+  }
+  .tb-tool-badge {
+    top: 6px;
+    right: 6px;
+  }
+}

@@ -1,0 +1,38 @@
+# 依赖
+node_modules/
+
+# 构建产物
+dist/
+build/
+
+# Vite 加载配置时 esbuild 转译出的临时文件
+# 正常跑完会自动删；进程被 Ctrl+C / 崩溃打断时会残留
+vite.config.js.timestamp-*
+
+# 备份与临时目录
+.bak-*/
+_tmpdeps/
+tmp/
+temp/
+
+# dev:daemon 常驻模式的日志
+.dev-logs/
+
+# 环境变量（.env.example 之类的样例文件仍可提交）
+.env
+.env.*
+!.env.example
+
+# 上传目录：用户头像 / 图片 / PDF 的临时落盘，运行时才会产生，别入库
+server/uploads/
+server-mongo/uploads/
+uploads/
+
+# 日志
+logs/
+*.log
+
+# 编辑器与系统文件
+.DS_Store
+.idea/
+.vscode/

@@ -16,7 +16,7 @@
       <iframe
         v-if="fallback"
         :key="frameKey"
-        :src="app.devUrl"
+        :src="entryUrl"
         :class="['micro-frame', { hidden: !!errMsg }]"
         @load="onFrameLoad"
       />
@@ -47,7 +47,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { loadMicroApp } from 'qiankun';
 import { getMicroApp } from '@/config/microApps';
 import { useUserStore } from '@/stores/user';
@@ -55,6 +55,7 @@ import ComingSoon from '@/views/ComingSoon.vue';
 
 const props = defineProps({ app: String });
 const route = useRoute();
+const router = useRouter();
 
 const user = useUserStore();
 const app = computed(() => getMicroApp(props.app));
@@ -63,6 +64,13 @@ const subPath = computed(() => {
   const r = route.params.rest;
   const s = Array.isArray(r) ? r.join('/') : r || '';
   return s ? '/' + s.replace(/^\/+/, '') : '/list';
+});
+// 子应用入口地址：本地 dev 指向子应用自己的 4200（同源、无跨域问题）；
+// 一旦跑到公网域名上就走同源的 /idle-app/（子应用产物也由同一个服务托管），
+// 保持同源能绕掉 qiankun 跨域拉取最容易排查错的一类问题。
+const entryUrl = computed(() => {
+  const local = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  return local ? app.value.devUrl : new URL(app.value.entry, location.origin).href;
 });
 const containerRef = ref(null);
 const fallback = ref(false);
@@ -83,8 +91,17 @@ function childProps() {
     token: user.token,
     username: user.username,
     userId: user.id,
+    // 学校隔离：子应用自己 access 不到主站的 localStorage 之外的来源，
+    // 统一在这里把当前校区透过去，它发请求时才带得上 ?school=
+    school: localStorage.getItem('tb_school') || '',
     path: subPath.value,
-    onLogout: () => user.logout()
+    onLogout: () => user.logout(),
+    // 跨应用路由：子应用要跳主站页面（如闲置详情「聊聊」→ /chat/:convId）时，
+    // 走主站的 router.push 做 SPA 切换。以前子应用用 location.href 整页刷新，
+    // 主站整个重载一遍，用户看到的就是跳转瞬间白屏。
+    // 注意：不能让子应用自己 pushState + 派发 popstate —— 它自己的兜底路由会
+    // 感知到 /chat/xxx 匹配不上，抢着 replace 回 /m/idle/list，两个路由器打架。
+    onNavigate: (path) => router.push(path)
   };
 }
 
@@ -103,7 +120,7 @@ async function mountChild() {
   clearTimeout(frameTimer);
   microApp = loadMicroApp({
     name: app.value.name,
-    entry: app.value.entry,
+    entry: entryUrl.value,
     container: containerRef.value,
     props: childProps()
   });
@@ -123,7 +140,7 @@ async function mountChild() {
 // 不再拿「N 秒内没 load」当判定依据：vite 首次编译子应用动辄十几秒，
 // 那样会把「正在正常加载」误报成「连接被拒绝」。
 async function probeDevServer() {
-  const url = app.value.devUrl;
+  const url = entryUrl.value;
   const ac = new AbortController();
   const t = setTimeout(() => ac.abort(), 2500);
   try {
@@ -165,7 +182,7 @@ function onFrameLoad() {
 }
 
 function openNewTab() {
-  window.open(app.value.devUrl, '_blank', 'noopener');
+  window.open(entryUrl.value, '_blank', 'noopener');
 }
 
 function retry() {

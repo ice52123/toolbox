@@ -5,7 +5,8 @@
          一旦样式模块没 expose 出 s（HMR / 预览面板缓存的 stale 模块），就是
          "Cannot read properties of undefined (reading 'card')" 整页降级。全局类名是字面量，永不为空。 -->
     <section v-if="!user.isLogin" class="tb-card" :class="s.guide">
-      <div :class="s.avatar">👤</div>
+      <!-- 用图标不用 👤 emoji：emoji 靠系统字体渲染，深色模式下会变白一团，图标吃 --tb-* 跟着主题走 -->
+      <div :class="s.avatar"><el-icon :size="30"><User /></el-icon></div>
       <h2>登录后即可拥有个人主页</h2>
       <p :class="s.desc">我的发布、我的收藏、我的订单，一处管理</p>
       <div class="tb-btns">
@@ -24,7 +25,7 @@
         <!-- 头像：点一下直接唤起选图，选完即传即生效，不做二次确认 -->
         <div :class="s.avatarWrap" title="点击换头像" @click="pickAvatar">
           <el-avatar :size="60" :class="s.avatar" :src="user.avatar">🙂</el-avatar>
-          <span :class="s.avatarMask"><el-icon :size="16"><Camera /></el-icon></span>
+          <span :class="s.avatarMask"><el-icon :size="22"><Camera /></el-icon></span>
         </div>
         <input ref="fileRef" type="file" accept="image/*" hidden @change="onPickAvatar" />
 
@@ -55,15 +56,12 @@
               <el-tag size="small" effect="plain" type="success">在校同学</el-tag>
             </template>
           </div>
-          <div :class="s.sub">用户 ID：{{ user.id || '待同步' }} · 校园集认证学生</div>
+          <div :class="s.sub">用户 ID：{{ user.code || '待同步' }}</div>
         </div>
         <div :class="s.act">
-          <button
-            :class="[s.logoutBtn, { [s.logoutBtnOn]: confirmLogout }]"
-            @click="doLogout"
-          >
+          <button :class="s.logoutBtn" @click="doLogout">
             <el-icon :size="13"><SwitchButton /></el-icon>
-            {{ confirmLogout ? '确认退出？' : '退出' }}
+            退出
           </button>
         </div>
       </div>
@@ -83,7 +81,7 @@
           </div>
 
           <div :class="s.body">
-            <div v-for="r in bk.rows" :key="r.id" :class="s.row">
+            <div v-for="r in bk.rows" :key="r.id" :class="s.row" @click="r.to && go(r.to)">
               <div :class="s.rowIco">{{ r.emoji }}</div>
               <div :class="s.rowMain">
                 <div :class="s.rowTitle">{{ r.title }}</div>
@@ -107,46 +105,75 @@
       </div>
     </template>
 
-    <!-- 外观主题：亮/暗 + 5 套主色（未登录也放，先看效果再决定要不要注册） -->
-    <div class="tb-card" :class="s.theme">
-      <div :class="s.themeHead">
-        <div>
-          <b>外观主题</b>
-          <p :class="s.mini">换主色 / 亮暗，全站立即生效，设备和浏览器各存一套</p>
-        </div>
-        <el-tag size="small" effect="plain" type="info">
-          {{ theme.dark ? '深色' : '浅色' }} · {{ theme.preset.name }}
-        </el-tag>
+    <!-- 设置与账户：地址 / 收付款 / 外观主题 收成紧凑入口行。
+         明细都在各自页面里管，这里只露一眼概要 —— 页面不再被一堆明细块撑长。
+         外观主题就地展开（不弹窗、不跳页），未登录也能试。 -->
+    <div class="tb-card" :class="s.setup">
+      <div :class="s.setupHead">
+        <span :class="s.headTitle"><i :class="s.bar" />设置与账户</span>
       </div>
 
-      <!-- 模式：胶囊分段控件，图标 + 文字，选中项吃品牌渐变 -->
-      <div :class="s.themeRow">
-        <span :class="s.chipLb">模式</span>
-        <div :class="s.segWrap">
-          <button :class="[s.segBtn, { [s.segBtnOn]: !theme.dark }]" @click="theme.setDark(false)">
-            <el-icon :size="15"><Sunny /></el-icon>浅色
-          </button>
-          <button :class="[s.segBtn, { [s.segBtnOn]: theme.dark }]" @click="theme.setDark(true)">
-            <el-icon :size="15"><Moon /></el-icon>深色
-          </button>
-        </div>
+      <div v-if="user.isLogin" :class="s.setRow" @click="go('/me/address')">
+        <span :class="s.setIco">📍</span>
+        <span :class="s.setMain">
+          <b :class="s.setName">收货地址</b>
+          <em :class="s.setSub">{{ addrSummary }}</em>
+        </span>
+        <span :class="s.setVal">{{ addrs.length ? addrs.length + ' 个' : '去添加' }}</span>
+        <span :class="s.chev">›</span>
       </div>
 
-      <!-- 主色：圆形色板，未选中的降饱和 + 半透明，别一律灰着 -->
-      <div :class="s.themeRow">
-        <span :class="s.chipLb">主色</span>
-        <div :class="s.accents">
-          <button
-            v-for="p in theme.presets"
-            :key="p.key"
-            :class="[s.sw, { [s.swOn]: theme.accent === p.key }]"
-            :style="{ '--sw-a': p.primary, '--sw-b': p.secondary }"
-            :title="p.name"
-            @click="theme.setAccent(p.key)"
-          >
-            {{ p.demo }}
-          </button>
-          <span :class="s.mini">当前：{{ theme.preset.name }}</span>
+      <div v-if="user.isLogin" :class="s.setRow" @click="go('/me/wallet#flow')">
+        <span :class="s.setIco">💳</span>
+        <span :class="s.setMain">
+          <b :class="s.setName">收付款</b>
+          <em :class="s.setSub">托管中 ¥{{ money(escrow) }} · 默认 {{ wallet.payMethod || '未设置' }}</em>
+        </span>
+        <span :class="s.setVal">余额 ¥{{ money(wallet.balance) }}</span>
+        <span :class="s.chev">›</span>
+      </div>
+
+      <div :class="s.setRow" @click="showTheme = !showTheme">
+        <span :class="s.setIco">🎨</span>
+        <span :class="s.setMain">
+          <b :class="s.setName">外观主题</b>
+          <em :class="s.setSub">换主色 / 亮暗，全站立即生效</em>
+        </span>
+        <span :class="s.setVal">{{ theme.dark ? '深色' : '浅色' }} · {{ theme.preset.name }}</span>
+        <span :class="[s.chev, { [s.chevOpen]: showTheme }]">›</span>
+      </div>
+
+      <div v-if="showTheme" :class="s.themeBody">
+        <div :class="s.themeRow">
+          <span :class="s.chipLb">模式</span>
+          <div :class="s.segWrap">
+            <button
+              :class="[s.segBtn, { [s.segBtnOn]: !theme.dark }]"
+              @click.stop="theme.setDark(false)"
+            >
+              <el-icon :size="15"><Sunny /></el-icon>浅色
+            </button>
+            <button :class="[s.segBtn, { [s.segBtnOn]: theme.dark }]" @click.stop="theme.setDark(true)">
+              <el-icon :size="15"><Moon /></el-icon>深色
+            </button>
+          </div>
+        </div>
+
+        <div :class="s.themeRow">
+          <span :class="s.chipLb">主色</span>
+          <div :class="s.accents">
+            <button
+              v-for="p in theme.presets"
+              :key="p.key"
+              :class="[s.sw, { [s.swOn]: theme.accent === p.key }]"
+              :style="{ '--sw-a': p.primary, '--sw-b': p.secondary }"
+              :title="p.name"
+              @click.stop="theme.setAccent(p.key)"
+            >
+              {{ p.demo }}
+            </button>
+            <span :class="s.mini">当前：{{ theme.preset.name }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -155,16 +182,19 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, useCssModule } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { ref, computed, onMounted, useCssModule } from 'vue';
+import { useRouter } from 'vue-router';
 // 共享原子类（CSS Modules）：s.card / s.row / s.head … 各页长得一样的外观都在这一份
 import shared from '@/styles/ui.module.less';
-import { Sunny, Moon, EditPen, SwitchButton } from '@element-plus/icons-vue';
+import { Sunny, Moon, EditPen, SwitchButton, User } from '@element-plus/icons-vue';
 import { useUserStore } from '@/stores/user';
 import { useThemeStore } from '@/stores/theme';
-import { orders as mockOrders } from '@/config/mockData';
 import { ElMessage } from 'element-plus';
 import request from '@/utils/request';
+import { fromNow } from '@/utils/format';
+import { idleOrdersAsMain, readIdleOrders } from '@/utils/idleOrders';
+import { listAddresses, fmtAddress } from '@/utils/address';
+import { readWallet } from '@/utils/wallet';
 import { Camera } from '@element-plus/icons-vue';
 
 // 一个句柄拿两类样式：ui.module.less 的共享原子类 + 本组件 <style module> 的局部类
@@ -173,28 +203,36 @@ const s = { ...shared, ...useCssModule() };
 const user = useUserStore();
 const theme = useThemeStore();
 const router = useRouter();
-const route = useRoute();
 
 // 昵称就地改（不再开「账号设置」弹窗）
 const editingName = ref(false);
 const draftName = ref('');
-// 退出登录的两步确认：停在确认态时按钮变红，离页/改名都复位，免得下次进来还是红的
-const confirmLogout = ref(false);
-watch(
-  () => route.fullPath,
-  () => {
-    confirmLogout.value = false;
-  }
-);
 const myGoods = ref([]);
-const orders = ref(mockOrders);
+const orders = ref([]);
+const fav = ref([]);
+// 收货地址簿 / 收付款：模拟阶段都在本地（见 utils/address.js、utils/wallet.js）
+const addrs = ref([]);
+const wallet = ref(readWallet());
+// 托管中金额：由本地订单实时算出，不单独存，免得跟订单状态对不上
+const escrow = ref(0);
+// 设置卡里的外观主题是就地展开的（不弹窗、不跳页）
+const showTheme = ref(false);
+// 金额 / 默认地址概要：设置卡那一行只露一眼，明细都在各自页面里
+const money = (n) => Number(n || 0).toFixed(2);
+const addrSummary = computed(() => {
+  const a = addrs.value.find((x) => x.isDefault) || addrs.value[0];
+  if (!a) return '还没填，快递寄送前先加一个';
+  return `${a.name} · ${a.phone} · ${fmtAddress(a)}`;
+});
 
 // 订单状态英文 → 中文 + 胶囊配色（订单列表 / 详情共用同一套文案）
 const statusPill = {
   pending: { label: '待付款', cls: s.pillWarn },
   paid: { label: '待发货', cls: s.pillMute },
   shipping: { label: '待收货', cls: s.pill },
-  done: { label: '已完成', cls: s.pillOk }
+  done: { label: '已完成', cls: s.pillOk },
+  // 已取消：后端真会写这个状态（/orders/:id/cancel），漏了会退化成「进行中」
+  cancel: { label: '已取消', cls: s.pillMute }
 };
 
 // 一栏三块数据驱动：加 / 删卡片只改这里，模板不用动
@@ -204,33 +242,51 @@ const blocks = computed(() => [
     title: '我的发布',
     count: myGoods.value.length,
     emoji: '📝',
-    // 有内容时右侧「全部 ›」进闲置列表，空态时「去发布 ›」直接跳发布
+    // 「全部 ›」进自己的清单页（可下架 / 删除 / 重新上架），不是跳去闲置市场看别人的
     more: '全部',
-    moreTo: '/m/idle',
-    rows: myGoods.value.slice(0, 4).map((g, i) => ({
+    moreTo: '/me/list?tab=publish',
+    rows: myGoods.value.slice(0, 2).map((g, i) => ({
       id: g.id ?? i,
       emoji: '🗂️',
       title: g.title,
       price: `¥${g.price}`,
-      side: `${g.cat || '其他'} · ${g.createdAt ? timeAgo(g.createdAt) : '刚刚'}`,
-      tag: g.online ? '在售' : '草稿',
-      pillCls: g.online ? s.pillOk : s.pillMute
+      side: `${g.cat || '其他'} · ${g.created_at ? fromNow(g.created_at) : '刚刚'}`,
+      tag: g.status === 'on' ? '在售' : '已下架',
+      pillCls: g.status === 'on' ? s.pillOk : s.pillMute,
+      to: '/m/idle/detail/' + g.id
     })),
     emptyText: '还没发布过闲置',
     emptyBtn: '去发布',
-    emptyTo: '/m/idle'
+    emptyTo: '/m/idle/publish'
   },
   {
     key: 'fav',
     title: '我的收藏',
-    count: 0,
+    count: fav.value.length,
     emoji: '🔖',
-    more: '去逛逛',
-    moreTo: '/m/idle',
-    rows: [],
-    emptyText: '收藏夹是空的',
+    // 收藏夹进自己的清单页（能取消收藏），别再跳闲置市场
+    more: '全部',
+    moreTo: '/me/list?tab=fav',
+    // 收藏夹里现在既有社区帖子（kind=post）也有闲置（kind=goods）：
+    // 帖子没有价格，那一栏改显示来源，副行放作者和时间，点进去跳帖子详情
+    rows: fav.value.slice(0, 2).map((g, i) => {
+      const isPost = g.kind === 'post';
+      return {
+        id: (isPost ? 'p' : 'g') + (g.id ?? i),
+        emoji: isPost ? '📄' : '🔖',
+        title: g.title,
+        price: isPost ? '社区帖子' : `¥${g.price}`,
+        side: isPost
+          ? `${g.author_name || '同学'}${g.created_at ? ' · ' + fromNow(g.created_at) : ''}`
+          : `${g.cat || '其他'} · ${g.owner_name || '同学'}`,
+        tag: isPost ? '帖子' : '闲置',
+        pillCls: s.pillOk,
+        to: isPost ? '/post/' + g.id : '/m/idle/detail/' + g.id
+      };
+    }),
+    emptyText: '还没收藏帖子或闲置',
     emptyBtn: '去逛逛',
-    emptyTo: '/m/idle'
+    emptyTo: '/community'
   },
   {
     key: 'order',
@@ -239,14 +295,16 @@ const blocks = computed(() => [
     emoji: '🧾',
     more: '全部',
     moreTo: '/orders',
-    rows: orders.value.slice(0, 3).map((o, i) => ({
+    rows: orders.value.slice(0, 2).map((o, i) => ({
       id: o.id ?? i,
       emoji: '📦',
       title: o.title,
       price: `¥${o.price}`,
-      side: o.sn || o.time || '',
+      side: o.sn || fromNow(o.created_at),
       tag: (statusPill[o.status] || { label: '进行中' }).label,
-      pillCls: (statusPill[o.status] || { cls: s.pill }).cls
+      pillCls: (statusPill[o.status] || { cls: s.pill }).cls,
+      // 闲置市场的模拟单没有主站订单详情页，直接进子应用订单详情（带物流轨迹）
+      to: o.local ? '/m/idle/order/detail/' + o.id : '/order/' + o.id
     })),
     emptyText: '还没有订单',
     emptyBtn: '看我的订单',
@@ -254,20 +312,41 @@ const blocks = computed(() => [
   }
 ]);
 
-onMounted(() => {
-  // 读子应用发布的本地草稿（同源时即真实数据；不同源就为空，属预期）
-  try {
-    const raw = localStorage.getItem('campus_idle_items');
-    if (raw) myGoods.value = JSON.parse(raw);
-  } catch {
-    myGoods.value = [];
-  }
-  // 头像以服务端为准：本地没缓存过就拉一次（演示会话 / 换过头像再进来都能显示）
-  if (user.isLogin && !user.avatar) {
+onMounted(async () => {
+  // 头像 / 6位用户ID 以服务端为准：进来拉一次全量资料同步到本地
+  if (user.isLogin) {
     request
       .get('/user/me')
-      .then((u) => user.setAvatar(u.avatar))
+      .then((u) => {
+        user.setAvatar(u.avatar);
+        user.setCode(u.code);
+      })
       .catch(() => {});
+  }
+  if (!user.isLogin) return;
+
+  // 地址簿 / 收付款都在本地（模拟阶段），不依赖网络，先读好：接口挂了这两块也能显示
+  addrs.value = listAddresses();
+  wallet.value = readWallet();
+  // 托管中 = 我已付款但交易还没完成的订单金额之和
+  escrow.value = readIdleOrders()
+    .filter((o) => ['paid', 'shipped'].includes(o.status))
+    .reduce((sum, o) => sum + Number(o.amount || o.price || 0), 0);
+
+  try {
+    // 我的发布走后端 /user/me/goods（按 token 里的 id 查，含已下架）。
+    // 以前调 /goods?owner=<localStorage 里的 tb_id>：一是那个接口只返回 status='on'，
+    // 下架的自己的商品凭空消失；二是 tb_id 缺失时传 0，页面永远空着。
+    myGoods.value = await request.get('/user/me/goods');
+    // 我的收藏：goods_fav 关联 goods
+    fav.value = await request.get('/user/me/favorites');
+    // 我的订单（买家 / 卖家都看得到）
+    const remoteOrders = (await request.get('/orders')) || [];
+    // 再并进闲置市场的模拟订单：它们只存在同源 localStorage 里，后端不认识。
+    // 接真实下单接口后删掉这一行即可（见 utils/idleOrders.js 顶部说明）
+    orders.value = [...idleOrdersAsMain({ withTime: fromNow }), ...remoteOrders];
+  } catch (e) {
+    console.error('[ Me ] 加载个人数据失败：', e);
   }
 });
 
@@ -324,23 +403,12 @@ function go(p) {
   router.push(p);
 }
 
-function timeAgo(iso) {
-  const d = new Date(iso);
-  return `${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
-// 退出登录：两步确认（点一下按钮变「确认退出？」，再点才真的退）。
-// 不用 ElMessageBox —— 这页已经没有弹窗了，破坏性操作就地二次确认更轻。
+// 退出登录：点了直接退，不做二次确认
 function doLogout() {
-  if (!confirmLogout.value) {
-    confirmLogout.value = true;
-    ElMessage.info('再点一次「确认退出」就会退出登录');
-    return;
-  }
   cancelName();
   user.logout();
   ElMessage.success('已退出');
-  router.push('/');
+  router.push('/auth');
 }
 </script>
 <style lang="less" module>
@@ -359,20 +427,42 @@ function doLogout() {
 .desc { margin: 0 0 20px; color: var(--tb-sub); }
 .note { margin: 18px 0 0; font-size: 12px; color: var(--tb-sub); line-height: 1.8; }
 .avatar {
-  background: linear-gradient(135deg, #ede9fe, #e0f2fe);
-  font-size: 30px;
+  .flex-center();
+  width: 60px;
+  height: 60px;
+  /* 未登录引导里头像要跟下面的文案同一条中轴线；块级元素不吃 text-align，得自己 margin 居中 */
+  margin: 0 auto 6px;
+  border-radius: 50%;
+  /* 底和图标都取自主题变量：换主色 / 切深色时一起变，不要再写死浅色渐变了 */
+  background: var(--tb-primary-soft);
+  color: var(--tb-primary);
 }
-/* 头像 + 悬浮换头像蒙层：整块可点，蒙层盖在头像上，hover 才浮现 */
+/* 头像 + 悬浮换头像蒙层：整块可点，蒙层盖在头像上，hover 才浮现。
+   坑：wrap 必须给 display:inline-flex —— 默认块级容器里 el-avatar 属于 inline 级，
+   按基线排会让行盒比头像高出 descender 那几 px，inset:0 的蒙层就成了竖椭圆
+   （深色背景上下各比头像大一圈，看着和头像对不上）。显式定宽高后 inset:0 才严格等大。 */
 .avatarWrap {
+  --ava-size: 60px;
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: 0 0 auto;
+  width: var(--ava-size);
+  height: var(--ava-size);
   cursor: pointer;
   line-height: 0;
+}
+/* wrap 内的头像：抹掉 .avatar 自带的 auto 外边距（否则 flex item 会被顶偏），
+   图标字号跟着头像尺寸走，别在 60px 圆里缩成一个小点 */
+.avatarWrap .avatar {
+  margin: 0;
+  font-size: calc(var(--ava-size) * 0.42);
 }
 .avatarMask {
   .flex-center();
   position: absolute;
-  inset: 0;
+  inset: 0; /* 与 wrap 等大：wrap 本身就等于头像尺寸 */
   border-radius: 50%;
   background: rgba(13, 10, 32, 0.42);
   color: #fff;
@@ -392,10 +482,8 @@ function doLogout() {
   .m-sm({
     padding: var(--tb-pad);
     gap: 12px;
-    /* 顶对齐是第一行的关键：垂直居中时 .main 会被算上「用户 ID」那行的高度往下挪，
-       昵称输入框的顶边就不是一个能写死的固定值，对不上右上角的退出按钮。
-       顶对齐后第一行（昵称 / 输入框）永远贴着卡片内容顶边（= --tb-pad 的纵向值） */
-    align-items: flex-start;
+    /* 头像与右侧文字块垂直居中：之前顶对齐，文字块比头像矮一截，看着偏上（用户反馈） */
+    align-items: center;
   });
 }
 .main { flex: 1; min-width: 170px; }
@@ -411,16 +499,20 @@ function doLogout() {
   font-size: 18px;
   font-weight: 800;
 
-  /* 让位给右上角的退出按钮：按钮右距 6 + 确认态最宽 105 + 间隙 ≈ 115，取 112 兜住 */
+  /* 让位给右上角的退出按钮：按钮右距 6 + 按钮宽 ~70 + 间隙，取 80 兜住 */
   .m-sm({
-    padding-right: 112px;
+    padding-right: 80px;
   });
 }
 .sub { font-size: 12.5px; color: var(--tb-sub); margin-top: 4px; }
 
-.cell { padding: var(--tb-pad-sm); }
-/* 空态时别把卡片撑成一块空白（原来 120px + 空态自身留白，两个空块连着中间就空了） */
-.body { min-height: 72px; }
+/* 每块是一张卡：并排时各自成块，边界清楚，不再靠页面底色硬撑 */
+.cell {
+  .card-surface();
+  padding: var(--tb-pad-sm);
+}
+/* 高度交给内容 / 空态，别留一块空白把卡片和整页撑长 */
+.body { min-height: 0; }
 
 /* —— 区块头：品牌竖条 + 标题 + 右侧数量徽标 + 「全部 ›」 —— */
 .headTitle {
@@ -447,16 +539,39 @@ function doLogout() {
   font-weight: 700;
 }
 
-.theme { margin-bottom: var(--tb-gap); }
-.themeHead {
-  .flex-between();
-  align-items: flex-start;
+/* —— 设置与账户：一行一个入口，明细进各自页面 —— */
+.setup { margin-bottom: var(--tb-gap); }
+.setupHead { .flex-between(); margin-bottom: 2px; }
+.setRow {
+  display: flex;
+  align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
+  padding: 11px 0;
+  cursor: pointer;
 
-  b { font-size: 16px; }
-  p { margin: 5px 0 0; }
+  & + & {
+    border-top: 1px solid var(--tb-line-soft);
+  }
+
+  &:hover .setName {
+    color: var(--tb-primary);
+  }
 }
+.setIco { flex: none; width: 22px; text-align: center; font-size: 16px; }
+.setMain { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.setName { font-size: 13.5px; font-weight: 600; transition: color 0.18s; }
+.setSub {
+  margin-top: 2px;
+  font-size: 11.5px;
+  font-style: normal;
+  color: var(--tb-sub);
+  .ellipsis-one();
+}
+.setVal { flex: none; font-size: 12.5px; color: var(--tb-sub); }
+.chev { flex: none; color: var(--tb-mute); font-size: 15px; transition: transform 0.2s; }
+.chevOpen { transform: rotate(90deg); }
+/* 主题设置就地展开的那块 */
+.themeBody { padding: 12px 0 2px; border-top: 1px dashed var(--tb-line); }
 
 .themeRow {
   /* 不能用 .flex-center()：它带 justify-content:center，两行内容宽度不同就各自居中、左边缘对不齐 */
@@ -520,11 +635,13 @@ function doLogout() {
   }
 }
 
-/* 列表行：整行可点，hover 给一层品牌淡底（负 margin + 同量 padding 让底铺到卡片边缘） */
+/* 列表行：整行可点，hover 给一层品牌淡底（负 margin + 同量 padding 让底铺到卡片边缘）。
+   紧凑化：单块只露 2 行，行内边距从 7px 收到 5px（见下方 .m-sm 手机端再收到 4px），
+   整块更收、不再把卡片撑高。横向仍用 --tb-gap-sm，留出负 margin 让 hover 底贴边 */
 .row {
   composes: tb-row from global;
   margin: 0 calc(var(--tb-gap-sm) * -1);
-  padding: 9px var(--tb-gap-sm);
+  padding: 5px var(--tb-gap-sm);
   border-radius: @r-sm;
   cursor: pointer;
   transition: background 0.2s;
@@ -541,20 +658,26 @@ function doLogout() {
   composes: tb-ico from global;
   transition: transform 0.2s;
 }
+/* 副行只留一行：订单那句「卖家迟迟未发货…」原来会折两行把卡片顶高 */
+.rowSub {
+  composes: tb-row-sub from global;
+  .ellipsis-one();
+}
 
 /* 副行：价格提亮加粗，跟在它后面的补充说明压成小字 */
 .price { color: var(--tb-primary); font-size: 12.5px; }
 .dot { margin: 0 5px; color: var(--tb-sub); font-size: 11px; }
 
 /* 空态：浅底槽（.inset）里一行搞定（图标 + 一句话 + 方角按钮），不再单独占一整块。
-   padding 交给 .inset，这里只管内容和高度，免得两个类的内边距互相覆盖 */
+   padding 交给 .inset，这里只管内容和高度，免得两个类的内边距互相覆盖。
+   紧凑化：min-height 44→36，和「2 行内容」的常态更近，空着也不显空旷 */
 .empty {
   .flex-center();
   gap: 8px;
-  min-height: 60px;
+  min-height: 36px;
 }
-.emptyIco { font-size: 16px; opacity: 0.72; }
-.emptyText { font-size: 12.5px; color: var(--tb-sub); }
+.emptyIco { font-size: 14px; opacity: 0.68; }
+.emptyText { font-size: 12px; color: var(--tb-sub); }
 
 /* 主色：圆形色板。未选中用「降饱和 + 半透明」表达，不是一律压成灰块 */
 .sw {
@@ -663,13 +786,12 @@ function doLogout() {
   flex: 0 0 auto;
   margin-left: auto;
 
-  /* 手机端不再单独占一横行（原来换行到头像下方、左对齐），改吊到卡片右上角。
-     top 取 --tb-pad 在 ≤900px 时的纵向值 14px：绝对定位是相对「内边距盒」算的，
-     14px 正好等于卡片内容顶边，也等于昵称输入框的顶边 —— 两者顶边对齐 */
+  /* 手机端吊到卡片右上角并跟着内容垂直居中（头像与文字已居中，按钮同样居中才齐） */
   .m-sm({
     position: absolute;
-    top: 14px;
+    top: 50%;
     right: 6px;
+    transform: translateY(-50%);
     z-index: 1;
     flex-basis: auto;
     margin-left: 0;
@@ -686,28 +808,23 @@ function doLogout() {
   border-radius: @r-pill;
   background: transparent;
   cursor: pointer;
-  color: #f43f5e;
+  color: var(--tb-danger);
   font-size: 12.5px;
   font-weight: 600;
   transition: 0.2s;
 
   &:hover {
     background: rgba(244, 63, 94, 0.08);
-    border-color: #f43f5e;
+    border-color: var(--tb-danger);
   }
 }
-/* 确认态：文字从「退出登录」变「确认退出？」会跳动，定个最小宽度顶住 */
-.logoutBtnOn {
-  background: rgba(244, 63, 94, 0.1);
-  border-color: #f43f5e;
-  color: #f43f5e;
-  min-width: 92px;
-}
 
-/* 窄屏：一栏三块变成三张竖卡，行内容量小，卡片别撑太高 */
+/* 窄屏：一栏三块变成三张竖卡，行内容量小，卡片别撑太高。
+   行内边距再收到 4px：竖卡更窄，每行更要贴紧，两行连起来才不显松散 */
 .m-sm({
   .cell { padding: var(--tb-pad); }
   .body { min-height: 0; }
+  .row { padding: 4px var(--tb-gap-sm); }
   .name { font-size: 17px; }
   .act { width: auto; }
 });

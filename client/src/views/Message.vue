@@ -5,11 +5,10 @@
         <h2>消息中心</h2>
         <p :class="s.sub">
           未读 {{ unreadCount }} 条 ·
-          实时推送走 Socket.IO（房间 room:user:{id}），当前为模拟数据，P5 接后端即可落地
+          实时推送走 Socket.IO（房间 room:user:{id}），当前已接后端
         </p>
       </div>
       <div :class="s.barOps">
-        <el-button size="small" type="primary" plain @click="simulate">模拟收到一条新消息</el-button>
         <el-button size="small" :disabled="!unreadCount" @click="markAll">全部已读</el-button>
       </div>
     </div>
@@ -23,7 +22,7 @@
         v-for="m in filtered"
         :key="m.id"
         :class="[s.card, { [s.unread]: m.unread }]"
-        @click="m.unread = false"
+        @click="open(m)"
       >
         <div :class="s.ic" :style="{ background: iconBg(m.type) }">
           <el-icon :size="18"><component :is="icon(m.type)" /></el-icon>
@@ -36,7 +35,7 @@
           <div :class="s.msgMeta">{{ m.from }} · {{ m.time }}</div>
         </div>
         <!-- 按钮文案 + 落地页都来自 mockData 的 action / to，不是死按钮 -->
-        <el-button size="small" type="primary" plain @click="open(m)">{{ m.action }}</el-button>
+        <el-button size="small" type="primary" plain @click.stop="open(m)">{{ m.action }}</el-button>
       </div>
 
       <el-empty v-if="!filtered.length" description="这里干干净净" />
@@ -45,10 +44,12 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, useCssModule } from 'vue';
+import { ref, computed, onMounted, useCssModule } from 'vue';
 import { useRouter } from 'vue-router';
 import { ChatLineSquare, ShoppingCart, Bell, Star, ChatDotRound } from '@element-plus/icons-vue';
-import { messages as mockMessages, messageTypes } from '@/config/mockData';
+import { messageTypes } from '@/config/mockData';
+import request from '@/utils/request';
+import { fromNow } from '@/utils/format';
 import { useUiStore } from '@/stores/ui';
 // 共享原子类（CSS Modules）：s.card / s.row … 各页长得一样的外观都在这份里
 import shared from '@/styles/ui.module.less';
@@ -59,42 +60,100 @@ const s = { ...shared, ...useCssModule() };
 const ui = useUiStore();
 const router = useRouter();
 const cur = ref('all');
-const list = ref(mockMessages.map((m) => ({ ...m })));
+const list = ref([]);
 
-// 点操作按钮：先标已读（红点跟着掉），再跳这条消息自己的落地页
-function open(m) {
-  if (m.unread) m.unread = false;
-  if (m.to) router.push(m.to);
+// 根据后端 ref_type / ref_id 推导这条消息的「落地页 + 按钮文案」
+function landing(m) {
+  const rid = m.ref_id;
+  const map = {
+    post: { to: '/post/' + rid, action: '查看' },
+    order: { to: '/order/' + rid, action: '查看订单' },
+    notice: { to: '/notice/' + rid, action: '查看' },
+    user: { to: '/user/' + encodeURIComponent(rid), action: '查看主页' },
+    chat: { to: '/chat/' + rid, action: '去聊天' },
+    // 商品详情在微应用里（/m/idle/detail/:id）。以前写死跳列表，点「查看」只到列表，
+    // 还得自己再找一遍那件商品；老消息没有 ref_id 时才退回列表
+    goods: { to: rid ? '/m/idle/detail/' + rid : '/m/idle', action: '查看' }
+  };
+  const hit = map[m.ref_type];
+  // ref_id 缺失（或类型未知）时不拼假链接：否则会得到 /user/undefined、/post/null 这种
+  // 点进去必然 404 的地址（goods 已在上面自行兜底到列表，故继续放行）
+  const missRef = m.ref_type !== 'goods' && (rid === null || rid === undefined || rid === '');
+  if (!hit || missRef) return { to: '', action: '查看' };
+  return hit;
 }
 
 const filtered = computed(() =>
   list.value.filter((m) => cur.value === 'all' || m.type === cur.value)
 );
 
+// 未读总数 = 全量列表里的未读数。列表是一次性拉全的（不按 tab 过滤），
+// 所以切 tab 不会改变这个数——红点口径必须和 AppLayout 每 7s 拉的
+// /messages/unread-count 完全一致，否则会把总数算成「当前 tab 的未读」甚至清零，
+// 轮询一到红点又冒出来（这就是「点掉又出现」）。
 const unreadCount = computed(() => list.value.filter((m) => m.unread).length);
 
-// 未读数同步到全局：导航「我的」和底部 tab 的红点都读它
-onMounted(() => ui.setUnread(unreadCount.value));
-watch(unreadCount, (n) => ui.setUnread(n));
-
-function markAll() {
-  list.value.forEach((m) => (m.unread = false));
-  ui.clearUnread();
+// 本地先算一次让 UI 立刻掉点，再拉后端总数兜底（与 7s 轮询同源，避免红点闪回）
+function syncUnread() {
+  ui.setUnread(unreadCount.value);
+  ui.loadUnread();
 }
 
-// 模拟「服务端推过来一条实时消息」——真接 Socket.IO 时，这段换成 socket.on('notify', ...)
-function simulate() {
-  list.value.unshift({
-    id: Date.now(),
-    type: 'trade',
-    title: '有人下单了你的「九成新 iPad Air 4 64G」',
-    from: '交易助手',
-    time: '刚刚',
-    unread: true,
-    action: '去处理',
-    to: '/order/SO2026100301' // 这张单是「我」卖出的 iPad，待发货 → 去处理就是发货
-  });
-  // 未读数由上面的 watch 自动同步，红点不用手动再 +1
+onMounted(loadMessages);
+
+async function loadMessages() {
+  try {
+    // 不传 type：一次拉全量，tab 只做前端筛选（后端 /messages 默认返回全部）
+    const rows = await request.get('/messages');
+    list.value = (rows || []).map((m) => {
+      const { to, action } = landing(m);
+      return {
+        id: m.id,
+        type: m.type,
+        title: m.title,
+        from: m.from_user,
+        time: fromNow(m.created_at),
+        unread: !!m.unread,
+        ref_type: m.ref_type,
+        ref_id: m.ref_id,
+        action,
+        to
+      };
+    });
+    ui.setUnread(unreadCount.value);
+  } catch (e) {
+    console.error('[ Message ] 加载消息失败：', e);
+  }
+}
+
+// 读一条 = 标已读并把状态落库。
+// 以前卡片点击只改本地 m.unread=false，服务端仍是未读，
+// 7s 轮询一拉 /messages/unread-count 红点就复活——这是「点掉又出现」的根因。
+async function readOne(m) {
+  if (!m.unread) return;
+  m.unread = false; // 乐观更新，点了立刻掉点
+  try {
+    await request.post('/messages/' + m.id + '/read');
+  } catch {
+    m.unread = true; // 失败回滚，避免本地与服务端口径不一致
+    return;
+  }
+  syncUnread();
+}
+
+// 点操作按钮：先标已读（红点跟着掉），再跳这条消息自己的落地页
+async function open(m) {
+  await readOne(m);
+  if (m.to) router.push(m.to);
+}
+
+// 全部已读：列表是「全量」，pending 即所有未读（以前只清当前 tab，剩下的红点一直在）
+async function markAll() {
+  const pending = list.value.filter((m) => m.unread);
+  if (!pending.length) return;
+  await Promise.all(pending.map((m) => request.post('/messages/' + m.id + '/read').catch(() => {})));
+  list.value.forEach((m) => (m.unread = false));
+  syncUnread();
 }
 
 const icons = { reply: ChatLineSquare, trade: ShoppingCart, system: Bell, follow: Star };

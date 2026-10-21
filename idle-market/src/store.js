@@ -1,43 +1,51 @@
-// 闲置市场数据层（阶段一：mock + 本地草稿，接口契约与后端对齐后再换 fetch）
-// 后端接入时只需把 loadGoods / saveItem 内部换成 axios 请求，页面代码不用动。
-const KEY = 'campus_idle_items';
-
+// 闲置子应用的静态字典 + 少量工具。
+// 数据一律走 api.js 打后端（MySQL 版 3201），这里不再存任何 mock / localStorage 草稿。
 export const cats = ['数码', '家居', '图书', '服饰', '母婴', '运动', '教材', '其他'];
 
-// 内置示例数据
-export const mockGoods = [
-  { id: 1, title: '九成新 iPad Air 4 64G', price: 1800, cat: '数码', place: '校区3栋', owner: '王同学', cond: '九成新', desc: '自用一年，配件齐全，无磕碰。', images: [], emoji: '📱' },
-  { id: 2, title: '婴儿推车 可折叠', price: 120, cat: '母婴', place: '小区5栋', owner: '李姐', cond: '八成新', desc: '可上飞机，轮子顺滑。', images: [], emoji: '🛒' },
-  { id: 3, title: '考研英语资料全套', price: 30, cat: '图书', place: '校园A区', owner: '学长', cond: '七成新', desc: '含真题与笔记，全新塑封未拆的有两本。', images: [], emoji: '📚' },
-  { id: 4, title: '健身哑铃 10kg 一对', price: 80, cat: '运动', place: '小区1栋', owner: '小陈', cond: '九成新', desc: '橡胶包胶，无异味。', images: [], emoji: '🏋️' },
-  { id: 5, title: '宜家书架 八成新', price: 60, cat: '家居', place: '小区2栋', owner: '张叔', cond: '八成新', desc: '两层，可拆卸。', images: [], emoji: '🪑' },
-  { id: 6, title: '冬季羽绒服 M码', price: 150, cat: '服饰', place: '校园B区', owner: '小林', cond: '九成新', desc: '洗过两次，无起球。', images: [], emoji: '🧥' }
-];
+export const conds = ['全新', '几乎全新', '九成新', '八成新', '七成新', '较旧'];
 
-function readLocal() {
-  try {
-    const raw = localStorage.getItem(KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
+export const ways = ['自提', '面交', '快递'];
 
-export function saveItem(item) {
-  const list = readLocal();
-  list.unshift(item);
-  localStorage.setItem(KEY, JSON.stringify(list));
-  return list;
-}
+// 没图时给个占位图案，卡片和详情页共用一套
+export const CAT_EMOJI = {
+  数码: '📱',
+  家居: '🪑',
+  图书: '📚',
+  服饰: '🧥',
+  母婴: '🛒',
+  运动: '🏋️',
+  教材: '📖',
+  其他: '📦'
+};
 
-export function loadGoods() {
-  return [...mockGoods, ...readLocal()];
-}
+export const emojiOf = (cat) => CAT_EMOJI[cat] || '📦';
 
-export function getGoodsById(id) {
-  return loadGoods().find((g) => String(g.id) === String(id));
-}
+// 订单状态字典：OrderList / OrderDetail 共用一份，别在两处各写一套。
+// type 用 el-tag / el-timeline-item 都认的语义色。
+//   unpaid   待付款     —— 刚提交，还没给钱
+//   paid     待发货     —— 钱已付，货款托管在平台（没到卖家手里）
+//   shipped  待收货     —— 卖家已发货 / 已约面交
+//   done     已完成     —— 买家确认收货，平台才把钱打给卖家
+//   refunded 已退款     —— 卖家未发货时买家申请退款，钱原路退回
+//   cancelled 已取消    —— 未付款时自己撤单
+export const ORDER_STATUS = {
+  unpaid: { text: '待付款', type: 'warning' },
+  paid: { text: '待发货', type: 'primary' },
+  shipped: { text: '待收货', type: 'success' },
+  done: { text: '已完成', type: 'info' },
+  refunded: { text: '已退款', type: 'info' },
+  cancelled: { text: '已取消', type: 'info' }
+};
 
-export function nextId() {
-  return `local_${Date.now()}`;
+// MySQL datetime 是 '2026-10-01 09:10:00'（没有 T），补个 T 才是合法 ISO
+export function timeAgo(s) {
+  if (!s) return '';
+  const d = new Date(String(s).replace(' ', 'T'));
+  if (Number.isNaN(d.getTime())) return '';
+  const min = Math.floor((Date.now() - d.getTime()) / 60000);
+  if (min < 1) return '刚刚';
+  if (min < 60) return `${min} 分钟前`;
+  if (min < 1440) return `${Math.floor(min / 60)} 小时前`;
+  if (min < 43200) return `${Math.floor(min / 1440)} 天前`;
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 }

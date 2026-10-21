@@ -109,7 +109,7 @@ onMounted(gen);
 .row { margin: 12px 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .row :deep(.el-input) { flex: 1; min-width: 0; }
 .lab { font-size: 13px; color: var(--tb-sub, #64748b); }
-.strength.strong { color: #16a34a; } .strength.mid { color: #d97706; } .strength.weak { color: #dc2626; }
+.strength.strong { color: var(--tb-ok); } .strength.mid { color: var(--tb-warn); } .strength.weak { color: var(--el-color-danger); }
 .checks {
   display: grid;
   grid-template-columns: 1fr 1fr;

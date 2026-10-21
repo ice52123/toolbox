@@ -151,7 +151,7 @@ function go(t) {
   padding: 8px 16px;
   border-radius: 999px;
   border: 1px solid rgba(124, 58, 237, 0.2);
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--tb-pill);
   color: var(--tb-sub, #6b6480);
   font-size: 14px;
   cursor: pointer;

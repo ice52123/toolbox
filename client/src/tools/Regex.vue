@@ -102,18 +102,18 @@ function clear() { pattern.value = ''; subject.value = ''; matches.value = []; m
 .row { margin: 12px 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .lab { font-family: ui-monospace, Menlo, monospace; font-size: 15px; color: var(--tb-sub, #64748b); }
 .row :deep(.el-input) { flex: 1; min-width: 0; }
-.msg.ok { color: #16a34a; }
-.msg.err { color: #dc2626; }
+.msg.ok { color: var(--tb-ok); }
+.msg.err { color: var(--el-color-danger); }
 .stat { margin: 12px 0 8px; font-size: 13.5px; color: var(--tb-sub, #64748b); }
 .hit { font-family: ui-monospace, Menlo, monospace; font-size: 13px; color: var(--tb-primary); }
-.dim { color: #94a3b8; }
+.dim { color: var(--tb-sub); }
 .grp {
   display: inline-block;
   margin-right: 6px;
   padding: 1px 7px;
   border-radius: 4px;
   background: var(--tb-ok-soft, #f0fdf4);
-  color: #15803d;
+  color: var(--tb-ok);
   font-family: ui-monospace, Menlo, monospace;
   font-size: 12.5px;
 }

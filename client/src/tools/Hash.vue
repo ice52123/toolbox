@@ -133,5 +133,5 @@ function copy(v) {
   word-break: break-all;
   margin-bottom: 4px;
 }
-.msg.err { margin-top: 10px; color: #dc2626; font-size: 13px; }
+.msg.err { margin-top: 10px; color: var(--el-color-danger); font-size: 13px; }
 </style>

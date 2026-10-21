@@ -149,13 +149,16 @@ export const messageTypes = [
 ];
 
 // —— P4 交易闭环：订单 ——
-export const orderStatus = ['all', 'pending', 'paid', 'shipping', 'done'];
+// cancel 是后端真会写进库的状态（/orders/:id/cancel），漏了它会让已取消订单的
+// 状态标签渲染成空白、筛选也筛不出来
+export const orderStatus = ['all', 'pending', 'paid', 'shipping', 'done', 'cancel'];
 
 export const orderStatusMap = {
   pending: '待付款',
   paid: '待发货',
   shipping: '待收货',
-  done: '已完成'
+  done: '已完成',
+  cancel: '已取消'
 };
 
 export const orders = [

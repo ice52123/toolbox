@@ -51,7 +51,7 @@ function goHome() {
   }
 }
 .e-ico {
-  color: #f59e0b;
+  color: var(--tb-warn);
 }
 .e-msg {
   margin: 0 auto 20px;

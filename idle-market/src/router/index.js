@@ -2,12 +2,18 @@ import { createRouter, createWebHistory } from 'vue-router';
 import List from '../views/List.vue';
 import Publish from '../views/Publish.vue';
 import Detail from '../views/Detail.vue';
+import Order from '../views/Order.vue';
+import OrderDetail from '../views/OrderDetail.vue';
+import OrderList from '../views/OrderList.vue';
 
 const routes = [
   { path: '/', redirect: '/list' },
   { path: '/list', component: List },
   { path: '/publish', component: Publish },
   { path: '/detail/:id', component: Detail },
+  { path: '/order/:goodsId', component: Order },
+  { path: '/order/detail/:id', component: OrderDetail },
+  { path: '/orders', component: OrderList },
   // 兜底：主站直接打开 /m/idle 时，只要 base 判定稍有偏差，
   // 顶层路由匹配不上就会「只渲染顶部栏 + 一片空白」。这里统一落到「逛一逛」。
   { path: '/:rest(.*)*', redirect: '/list' }

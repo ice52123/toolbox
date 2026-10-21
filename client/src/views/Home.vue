@@ -59,11 +59,11 @@
           <span>最新闲置</span>
           <el-link type="primary" :underline="false" @click="$router.push('/m/idle')">逛一逛 ›</el-link>
         </div>
-        <div v-for="g in latestGoods" :key="g.id" class="row" @click="$router.push('/m/idle')">
+        <div v-for="g in latestGoods" :key="g.id" class="row" @click="goGoods(g)">
           <div class="row-thumb">🛍️</div>
           <div class="row-main">
             <div class="row-t">{{ g.title }}</div>
-            <div class="row-m">{{ g.cat }} · {{ g.place }} · {{ g.time }}</div>
+            <div class="row-m">{{ g.place }} · {{ g.time }}</div>
           </div>
           <div class="row-p">¥{{ g.price }}</div>
         </div>
@@ -74,11 +74,11 @@
           <span>校园热帖</span>
           <el-link type="primary" :underline="false" @click="$router.push('/community')">进社区 ›</el-link>
         </div>
-        <div v-for="p in hotPosts" :key="p.id" class="row" @click="$router.push('/community')">
+        <div v-for="p in hotPosts" :key="p.id" class="row" @click="goPost(p)">
           <div class="row-thumb">💬</div>
           <div class="row-main">
             <div class="row-t">{{ p.title }}</div>
-            <div class="row-m">{{ p.board }} · {{ p.author }} · {{ p.hot }} 热度</div>
+            <div class="row-m">{{ boardName(p.board) }} · {{ p.author }} · {{ p.hot }} 热度</div>
           </div>
           <div class="row-p small">{{ p.time }}</div>
         </div>
@@ -120,7 +120,9 @@ import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { Bell, Right, Select } from '@element-plus/icons-vue';
 import { tools, categories } from '@/config/tools';
-import { stats, notices, latestGoods, hotPosts } from '@/config/mockData';
+import request from '@/utils/request';
+import { fromNow } from '@/utils/format';
+import { boardName } from '@/config/boards';
 import { useUiStore } from '@/stores/ui';
 
 const router = useRouter();
@@ -155,17 +157,76 @@ const quickOn = computed(() => {
   return hit ? hit.path : '';
 });
 
+// 首页数据：全部走 MySQL 后端（:3201）。后端返回的结构与页面字段不同，这里统一映射成模板形状。
+const stats = ref([]); // [{key,label,value,unit}] —— 后端 /home/stats 是 {posts,goods,users,notices,tools}
+const notices = ref([]); // 后端 /notices → [{id,tag,title,content,date}]
+const latestGoods = ref([]); // 后端 /goods/latest → [{id,title,price,images,owner_name,created_at}]
+const hotPosts = ref([]); // 后端 /posts/hot → [{id,board_key,title,author_name,likes,comments,created_at}]
+
 const noticeIdx = ref(0);
 let noticeTimer = null;
 function nextNotice() {
-  noticeIdx.value = (noticeIdx.value + 1) % notices.length;
+  noticeIdx.value = (noticeIdx.value + 1) % (notices.value.length || 1);
 }
 function openNotice() {
-  router.push('/notice/' + (notices[noticeIdx.value] || {}).id);
+  router.push('/notice/' + (notices.value[noticeIdx.value] || {}).id);
 }
-onMounted(() => {
+onMounted(async () => {
   noticeTimer = setInterval(nextNotice, 5000);
+  await loadHome();
 });
+
+async function loadHome() {
+  try {
+    // 公告 / 最新闲置 / 热门帖子都在后端的 home 模块下（/api/home/…），
+    // 少了 /home 这层前缀会掉到 「/api/xxx 接口不存在」
+    const [st, ns, lg, hp] = await Promise.all([
+      request.get('/home/stats'),
+      request.get('/home/notices'),
+      request.get('/home/goods/latest'),
+      request.get('/home/posts/hot')
+    ]);
+    // 后端 stats 是对象，这里铺成模板要的数组（key/label/value/unit 四件套）
+    stats.value = [
+      { key: 'tools', label: '在线工具', value: st.tools, unit: '个' },
+      { key: 'goods', label: '校园闲置', value: st.goods, unit: '件' },
+      { key: 'users', label: '在校同学', value: st.users, unit: '人' },
+      { key: 'posts', label: '社区帖子', value: st.posts, unit: '篇' },
+      { key: 'notices', label: '校园公告', value: st.notices, unit: '条' }
+    ];
+    notices.value = ns || [];
+    latestGoods.value = (lg || []).map((g) => ({
+      id: g.id,
+      title: g.title,
+      price: g.price,
+      cat: '',
+      place: g.owner_name || '校园',
+      time: fromNow(g.created_at)
+    }));
+    hotPosts.value = (hp || []).map((p) => ({
+      id: p.id,
+      title: p.title,
+      board: p.board_key,
+      author: p.author_name,
+      hot: p.likes,
+      time: fromNow(p.created_at)
+    }));
+  } catch (e) {
+    console.error('[ Home ] 加载首页数据失败：', e);
+  }
+}
+// 点「最新闲置」的某一条 → 微应用的商品详情（/m/idle/detail/:id）。
+// 以前这一行写死 $router.push('/m/idle')，点哪件都只是回到列表，看着像「没进详情」。
+// id 缺失（老接口没给）时退回列表，别拼出 /detail/undefined 这种必然 404 的地址。
+function goGoods(g) {
+  router.push(g && g.id ? '/m/idle/detail/' + g.id : '/m/idle');
+}
+
+// 点「校园热帖」的某一条 → 主站帖子详情（/post/:id）。同理，原来也是写死跳 /community。
+function goPost(p) {
+  router.push(p && p.id ? '/post/' + p.id : '/community');
+}
+
 onBeforeUnmount(() => {
   if (noticeTimer) clearInterval(noticeTimer);
 });
@@ -193,9 +254,10 @@ const visible = computed(() => filtered.value.slice(0, PAGE_SIZE));
 const hiddenCount = computed(() => Math.max(0, filtered.value.length - PAGE_SIZE));
 
 function pickAll() {
-  // 顶部「工具」下拉切回「全部工具」
+  // 顶部「工具」下拉切回「全部工具」，再进全量工具页
+  // （原来这里 push('/')，等于把用户留在首页 → 点了像没反应）
   ui.setCat('all');
-  router.push('/');
+  router.push('/tools');
 }
 
 function goTools() {

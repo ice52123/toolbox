@@ -196,10 +196,15 @@
   justify-content: space-between;
 }
 
-/* —— 一行三块 / 两块的网格 —— */
+/* —— 一行三块 / 两块的网格 ——
+   ⚠️ 必须写 minmax(0, 1fr)，不能图省事写 1fr：
+   1fr 的隐式下限是 auto（= 不低于内容 min-content），卡片里只要有一行
+   不换行的长文本（订单行的「卖家迟迟未发货…」、单行省略的副标题），
+   该列就会被撑到几百 px 顶出容器 —— 手机端整张卡被裁掉右边一半就是这么来的。
+   minmax(0, 1fr) 允许列缩到 0，超长内容交给行内的 min-width:0 + 省略号处理。 */
 .cols-3() {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--tb-gap);
   align-items: start;
 }

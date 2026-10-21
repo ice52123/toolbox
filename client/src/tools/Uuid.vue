@@ -83,5 +83,5 @@ function copyAll() {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 13px;
 }
-.empty { padding: 18px 0; text-align: center; color: #94a3b8; font-size: 13px; }
+.empty { padding: 18px 0; text-align: center; color: var(--tb-sub); font-size: 13px; }
 </style>

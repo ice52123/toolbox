@@ -11,7 +11,6 @@
         <span :class="s.logo">校</span>
         <span :class="s.brandT">校园集<i>CampusHub</i></span>
       </div>
-      <el-button text @click="home">返回首页</el-button>
     </header>
 
     <main :class="s.stage">
@@ -41,7 +40,7 @@
 
       <!-- 右：玻璃面板 -->
       <section :class="s.glass">
-        <!-- ————————— 一键登录（默认）：本机号免验证码，换号就在本页改 ————————— -->
+        <!-- ————————— 一键登录（默认）：本机号免验证码，其他号码走密码 ————————— -->
         <div v-if="mode === 'quick'">
           <!-- 这里不放「返回」：一键登录是登录页的主入口，进来就是终点，
                右上角顶栏的「返回首页」已经够用了；只有从重置面板退回来的那一档才需要返回 -->
@@ -50,10 +49,20 @@
             <p :class="s.qSub">
               {{
                 editing
-                  ? '换个号码、或收不到一键登录时，填号验完码直接登录'
+                  ? '非本机号码需输入密码验证身份；改回本机号码仍可一键登录'
                   : '验证通过即登录，没注册过的手机号会自动帮你开号'
               }}
             </p>
+          </div>
+
+          <!-- 校园选择：登录时先定校区，选完持久化，全站请求自动带 ?school= -->
+          <div :class="s.fld">
+            <label :class="s.lb">选择校园<span :class="s.req">*</span></label>
+            <SchoolSwitcher style="width: 100%" />
+            <div v-if="!schoolStore.currentId" :class="s.tipLine">
+              <el-icon :size="13"><InfoFilled /></el-icon>
+              <span>登录前请先选择你的校园</span>
+            </div>
           </div>
 
           <!-- 号码行：默认只显示本机号（免验证码），点号码/「换个号码」就变成可编辑 -->
@@ -79,7 +88,7 @@
             </button>
           </div>
 
-          <!-- 改号态：号码就地编辑，同页再补一个验证码，不跳面板 -->
+          <!-- 改号态：号码就地编辑，不跳面板；非本机号点「登录」再补密码框 -->
           <div v-else :class="s.editRow">
             <el-input
               v-model="lg.phone"
@@ -93,30 +102,22 @@
             <button type="button" :class="s.miniBtn" @click="useDevicePhone">用本机号</button>
           </div>
 
-          <div v-if="editing" :class="s.fld">
-            <label :class="s.lb">验证码</label>
-            <div :class="s.codeRow">
-              <el-input
-                v-model="lg.code"
-                size="large"
-                maxlength="6"
-                inputmode="numeric"
-                placeholder="6 位数字验证码"
-                :prefix-icon="Message"
-                @keyup.enter="submit"
-              />
-              <button
-                type="button"
-                :class="s.codeBtn"
-                :disabled="cd.login > 0"
-                @click="sendCode('login')"
-              >
-                {{ cd.login > 0 ? cd.login + 's 后重发' : '获取验证码' }}
-              </button>
-            </div>
-            <div v-if="lgTip" :class="s.tipLine">
+          <!-- 非本机号：点过「登录」后才亮出密码框（needPwd），输入密码再点登录才真正提交 -->
+          <div v-if="editing && needPwd" :class="s.fld">
+            <label :class="s.lb">密码</label>
+            <el-input
+              v-model="lg.password"
+              size="large"
+              type="password"
+              show-password
+              maxlength="20"
+              placeholder="输入该手机号的密码"
+              :prefix-icon="Lock"
+              @keyup.enter="submit"
+            />
+            <div :class="s.tipLine">
               <el-icon :size="13"><InfoFilled /></el-icon>
-              <span>{{ lgTip }}</span>
+              <span>该号码不是本机号码，需密码验证身份后登录</span>
             </div>
           </div>
 
@@ -134,10 +135,10 @@
             :disabled="loading || !canSubmit"
             @click="submit"
           >
-            {{ loading ? '登录中…' : editing ? '登录 / 注册' : '一键登录' }}
+            {{ loading ? '登录中…' : editing ? (needPwd ? '登录' : '登录 / 注册') : '一键登录' }}
           </button>
 
-          <!-- 第三方登录位：演示环境点了给提示，别静默无反应 -->
+          <!-- 第三方登录位：品牌 SVG 图标（simple-icons 官方 path），演示环境点了给提示 -->
           <div :class="s.oauthRow">
             <button
               v-for="o in oauth"
@@ -148,7 +149,16 @@
               :title="o.name"
               @click="ElMessage.info(o.name + '登录暂未接入')"
             >
-              {{ o.t }}
+              <svg
+                v-if="o.svg"
+                viewBox="0 0 24 24"
+                width="21"
+                height="21"
+                fill="#fff"
+                aria-hidden="true"
+                v-html="o.svg"
+              />
+              <el-icon v-else :size="20"><component :is="o.icon" /></el-icon>
             </button>
           </div>
 
@@ -213,7 +223,6 @@
 
     <footer :class="s.foot">
       <span>© 2026 校园集 CampusHub</span>
-      <el-link type="primary" :underline="false" @click="home">回到首页</el-link>
     </footer>
   </div>
 </template>
@@ -227,7 +236,9 @@ import { Shop, ChatDotRound, Tools, Bell } from '@element-plus/icons-vue';
 import { useUserStore } from '@/stores/user';
 import { useUiStore } from '@/stores/ui';
 import { useThemeStore } from '@/stores/theme';
+import { useSchoolStore } from '@/stores/school';
 import SmsFields from '@/components/SmsFields.vue';
+import SchoolSwitcher from '@/components/SchoolSwitcher.vue';
 import shared from '@/styles/ui.module.less';
 
 // 一个句柄拿两类样式：ui.module.css 的共享原子类 + 本组件 @import '@/styles/mixins.less';
@@ -238,6 +249,7 @@ const router = useRouter();
 const user = useUserStore();
 const ui = useUiStore();
 const theme = useThemeStore();
+const schoolStore = useSchoolStore();
 
 const loading = ref(false);
 const agreed = ref(true); // 协议默认勾上，别让人为了登录先读两千字
@@ -281,15 +293,13 @@ const maskPhone = computed(() => {
   return `${v.slice(0, 3)}****${v.slice(7)}`;
 });
 
-// 登录面板 / 重置面板各自持有一份输入，切面板不会互相带过去
-const lg = reactive({ phone: '', code: '' });
+// 登录面板 / 重置面板各自持有一份输入，切面板不会互相带过去。
+// 登录面板不再收验证码：本机号一键进，其他号码走密码
+const lg = reactive({ phone: '', password: '' });
 const rs = reactive({ phone: '', code: '', password: '' });
-const cd = reactive({ login: 0, reset: 0 });
-const demo = reactive({ login: '', reset: '' });
+const cd = reactive({ reset: 0 });
+const demo = reactive({ reset: '' });
 
-const lgTip = computed(() =>
-  demo.login ? `演示环境不发短信：本次验证码为 ${demo.login}，可点上方按钮再拿一次` : ''
-);
 const rsTip = computed(() =>
   demo.reset ? `演示环境不发短信：本次验证码为 ${demo.reset}，可点上方按钮再拿一次` : ''
 );
@@ -306,11 +316,22 @@ const introStats = [
   { k: '服务同学', v: '8 万+' }
 ];
 
-// 第三方登录位：只做视觉占位，点了给明确提示
+// 第三方登录位：微信/QQ 用 simple-icons 官方品牌 path（白填充），邮箱用 Element 图标。
+// 只做视觉占位，点了给明确提示
 const oauth = [
-  { k: 'wechat', t: '微', name: '微信', bg: '#07C160' },
-  { k: 'qq', t: 'Q', name: 'QQ', bg: '#12B7F5' },
-  { k: 'mail', t: '@', name: '邮箱', bg: '#2DB3A6' }
+  {
+    k: 'wechat',
+    name: '微信',
+    bg: '#07C160',
+    svg: '<path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.837-6.656-6.088V8.89c-.135-.01-.27-.027-.407-.03zm-2.53 3.274c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.969-.982z"/>'
+  },
+  {
+    k: 'qq',
+    name: 'QQ',
+    bg: '#12B7F5',
+    svg: '<path d="M21.395 15.035a40 40 0 0 0-.803-2.264l-1.079-2.695c.001-.032.014-.562.014-.836C19.526 4.632 17.351 0 12 0S4.474 4.632 4.474 9.241c0 .274.013.804.014.836l-1.08 2.695a39 39 0 0 0-.802 2.264c-1.021 3.283-.69 4.643-.438 4.673.54.065 2.103-2.472 2.103-2.472 0 1.469.756 3.387 2.394 4.771-.612.188-1.363.479-1.845.835-.434.32-.379.646-.301.778.343.578 5.883.369 7.482.189 1.6.18 7.14.389 7.483-.189.078-.132.132-.458-.301-.778-.483-.356-1.233-.646-1.846-.836 1.637-1.384 2.393-3.302 2.393-4.771 0 0 1.563 2.537 2.103 2.472.251-.03.581-1.39-.438-4.673"/>'
+  },
+  { k: 'mail', name: '邮箱', bg: '#2DB3A6', icon: Message }
 ];
 
 function home() {
@@ -324,18 +345,17 @@ function redirect() {
   return typeof r === 'string' && r.startsWith('/') ? r : '/';
 }
 
-// —— 验证码：演示环境直接出码，真实环境发短信 ——
+// —— 验证码（只剩重置密码面板用）：演示环境直接出码，真实环境发短信 ——
 let timer = null;
-function rollCode(which) {
-  demo[which] = String(Math.floor(1000 + Math.random() * 9000));
+function rollCode() {
+  demo.reset = String(Math.floor(1000 + Math.random() * 9000));
 }
 function startCountdown() {
   if (timer) clearInterval(timer);
   timer = setInterval(() => {
-    if (cd.login > 0) cd.login -= 1;
     if (cd.reset > 0) cd.reset -= 1;
-    // 两个面板都归零就停表，别留个空转的定时器
-    if (cd.login <= 0 && cd.reset <= 0 && timer) {
+    // 归零就停表，别留个空转的定时器
+    if (cd.reset <= 0 && timer) {
       clearInterval(timer);
       timer = null;
     }
@@ -343,13 +363,12 @@ function startCountdown() {
 }
 const phoneOk = (v) => /^1[3-9]\d{9}$/.test(v || '');
 
-function sendCode(which) {
-  const f = which === 'login' ? lg : rs;
-  if (!phoneOk(f.phone)) return ElMessage.warning('请先填写正确的手机号（11 位数字）');
-  rollCode(which);
-  cd[which] = 60;
+function sendCode() {
+  if (!phoneOk(rs.phone)) return ElMessage.warning('请先填写正确的手机号（11 位数字）');
+  rollCode();
+  cd.reset = 60;
   startCountdown();
-  ElMessage.success(`验证码已发送（演示：${demo[which]}）`);
+  ElMessage.success(`验证码已发送（演示：${demo.reset}）`);
 }
 
 function fillPhone(which) {
@@ -358,33 +377,51 @@ function fillPhone(which) {
   ElMessage.info(`已代入本机号码（演示号 ${DEMO_PHONE}）`);
 }
 
-// —— 本页改号：一键登录页里直接改号码，改完同页补验证码，不用跳面板 ——
+// —— 本页改号：点号码/「换个号码」就地编辑；
+//     填本机号仍一键登录，填其他号点「登录」才亮出密码框 ——
 const editing = ref(false);
+const needPwd = ref(false);
 
 function startEdit() {
   if (gettingPhone.value) return;
   editing.value = true;
+  needPwd.value = false; // 重新选号，密码框先收回去，点了「登录」再按号码决定
   lg.phone = phone.value || '';
-  lg.code = '';
+  lg.password = '';
 }
 
 function useDevicePhone() {
   editing.value = false;
+  needPwd.value = false;
   lg.phone = '';
-  lg.code = '';
-  demo.login = '';
-  cd.login = 0;
+  lg.password = '';
 }
 
-// 本机号没动 → 免验证码一键进；改过号 → 验完码再进
-const canSubmit = computed(() =>
-  editing.value ? phoneOk(lg.phone) && !!lg.code : !!phoneOk(phone.value) && !gettingPhone.value
-);
+// 本机号没动 → 一键进；改过号 → 没出密码框先出框，出了就要求密码填好。
+// 两条路都必须先选好校园（登录时定校区，没选不让登录）
+const canSubmit = computed(() => {
+  const schooled = !!schoolStore.currentId;
+  if (!schooled) return false;
+  return editing.value
+    ? phoneOk(lg.phone) && (!needPwd.value || lg.password.length >= 6)
+    : !!phoneOk(phone.value) && !gettingPhone.value;
+});
 
-// 一个入口走两条路，模板/回车键都调它
+// 一个入口走三条路，模板/回车键都调它：
+// 非编辑态 → 一键；编辑态填本机号 → 收回密码框仍走一键；
+// 编辑态填其他号 → 第一次点只亮密码框，再点才带密码登录
 function submit() {
-  if (editing.value) doSmsLogin();
-  else doQuick();
+  if (!editing.value) return doQuick();
+  if (!phoneOk(lg.phone)) return ElMessage.warning('请填写正确的手机号（11 位数字）');
+  if (lg.phone === phone.value) {
+    needPwd.value = false;
+    return doQuick();
+  }
+  if (!needPwd.value) {
+    needPwd.value = true;
+    return;
+  }
+  doPwdLogin();
 }
 
 const rsReady = computed(() => phoneOk(rs.phone) && !!rs.code && rs.password.length >= 6);
@@ -398,6 +435,7 @@ function goBack() {
 
 // —— 一键登录：后端只要号码，注册过直接进，没注册过自动开号 ——
 async function doQuick() {
+  if (!schoolStore.currentId) return ElMessage.warning('请先选择你的校园');
   if (!phoneOk(phone.value)) return ElMessage.warning('号码还没拿到，稍等一下或点右侧换号');
   if (!agreed.value) return ElMessage.warning('请先勾选同意《校园集用户协议》与《隐私政策》');
 
@@ -421,20 +459,22 @@ async function doQuick() {
     loading.value = false;
   }
 }
-// —— 短信验证码登录（本页改号后走这条）——
-async function doSmsLogin() {
-  if (!phoneOk(lg.phone)) return ElMessage.warning('请填写正确的手机号（11 位数字）');
-  if (!lg.code) return ElMessage.warning('请输入验证码');
-  if (lg.code !== demo.login) return ElMessage.warning('验证码不对，点「获取验证码」再拿一个');
+// —— 手机号 + 密码登录（非本机号走这条）——
+// P2 对齐后端契约：现在先打 /user/login（username 位置传手机号），
+// 后端定稿「手机号+密码」接口后这里只改 user store 里的一个方法
+async function doPwdLogin() {
+  if (!schoolStore.currentId) return ElMessage.warning('请先选择你的校园');
+  if (lg.password.length < 6) return ElMessage.warning('请输入密码（至少 6 位）');
 
   loading.value = true;
   try {
-    await user.smsLogin(lg.phone, lg.code);
+    await user.login(lg.phone, lg.password);
     ElMessage.success('登录成功');
     backTo(redirect());
   } catch (e) {
     const msg = (e && e.message) || '';
-    if (/验证码|手机号|不存在|格式/.test(msg)) return ElMessage.error(msg);
+    if (/密码|不存在|手机号|格式/.test(msg)) return ElMessage.error(msg);
+    // 后端还没接上（演示环境）：落一个本地会话，保证整条链路能点通
     user.setSession(
       'demo-' + Date.now(),
       '同学' + lg.phone.slice(-4),
@@ -758,6 +798,11 @@ onBeforeUnmount(() => {
 .lb {
   display: block; font-size: 12.5px; font-weight: 600;
   color: var(--tb-sub); margin-bottom: 7px;
+}
+.req {
+  color: #ef4444;
+  margin-left: 3px;
+  font-weight: 700;
 }
 .meter { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
 .mTrack { flex: 1; display: flex; align-items: center; gap: 5px; }

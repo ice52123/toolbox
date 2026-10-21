@@ -130,7 +130,7 @@ async function run() {
 .row { margin: 14px 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .lab { font-size: 13px; color: var(--tb-sub, #64748b); }
 .row :deep(.el-input) { flex: 1; min-width: 0; }
-.tip { font-size: 12px; color: #94a3b8; line-height: 1.6; }
+.tip { font-size: 12px; color: var(--tb-sub); line-height: 1.6; }
 .meta { margin-top: 12px; font-size: 13px; color: var(--tb-sub, #64748b); }
 .meta b { color: var(--tb-primary); }
 .done {
@@ -140,9 +140,9 @@ async function run() {
   background: var(--tb-ok-soft, #f0fdf4);
   border: 1px solid rgba(22, 163, 74, 0.2);
 }
-.lab { display: block; margin-bottom: 6px; font-size: 12.5px; color: #64748b; }
+.lab { display: block; margin-bottom: 6px; font-size: 12.5px; color: var(--tb-sub); }
 .done ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .done li { display: flex; align-items: center; gap: 10px; font-size: 13px; }
 .done li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.empty { padding: 16px 0; text-align: center; color: #94a3b8; font-size: 13px; }
+.empty { padding: 16px 0; text-align: center; color: var(--tb-sub); font-size: 13px; }
 </style>

@@ -76,6 +76,6 @@ filterList();
 .n { font-size: 14px; font-weight: 700; color: var(--tb-primary); }
 .rt { font-size: 12.5px; color: var(--tb-sub, #64748b); }
 .stops { padding: 4px 2px; font-size: 13px; line-height: 1.9; }
-.stop i { font-style: normal; color: #cbd5e1; margin: 0 4px; }
-.empty { padding: 16px 0; text-align: center; color: #94a3b8; font-size: 13px; }
+.stop i { font-style: normal; color: var(--tb-sub); margin: 0 4px; }
+.empty { padding: 16px 0; text-align: center; color: var(--tb-sub); font-size: 13px; }
 </style>

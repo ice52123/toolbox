@@ -64,6 +64,6 @@ function filterList() {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   text-align: center;
 }
-.tr .c:last-child { color: #16a34a; }
-.foot { margin-top: 12px; font-size: 12px; color: #94a3b8; }
+.tr .c:last-child { color: var(--tb-ok); }
+.foot { margin-top: 12px; font-size: 12px; color: var(--tb-sub); }
 </style>

@@ -95,7 +95,7 @@ async function run() {
 <style lang="less" scoped>@import '@/styles/mixins.less';
 .pdf-tool { max-width: 720px; }
 .row { margin: 14px 0; display: flex; align-items: center; gap: 10px; }
-.tip { font-size: 12px; color: #94a3b8; line-height: 1.6; }
+.tip { font-size: 12px; color: var(--tb-sub); line-height: 1.6; }
 .fl {
   list-style: none;
   margin: 14px 0 0;
@@ -126,9 +126,9 @@ async function run() {
   text-align: center;
 }
 .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sz { color: #94a3b8; font-size: 12px; font-family: ui-monospace, Menlo, monospace; }
+.sz { color: var(--tb-sub); font-size: 12px; font-family: ui-monospace, Menlo, monospace; }
 .done { padding: 12px; border-radius: 6px; background: var(--tb-ok-soft, #f0fdf4); border: 1px solid rgba(22, 163, 74, 0.2); }
-.lab { font-size: 12.5px; color: #64748b; margin-bottom: 6px; }
-.dl { font-weight: 600; color: #15803d; }
-.empty { padding: 16px 0; text-align: center; color: #94a3b8; font-size: 13px; }
+.lab { font-size: 12.5px; color: var(--tb-sub); margin-bottom: 6px; }
+.dl { font-weight: 600; color: var(--tb-ok); }
+.empty { padding: 16px 0; text-align: center; color: var(--tb-sub); font-size: 13px; }
 </style>

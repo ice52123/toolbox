@@ -4,6 +4,10 @@ node_modules/
 # 构建产物
 dist/
 build/
+# sync-build.mjs 构建前把旧 dist 改名成 dist_old_<时间戳> 留下的备份
+dist_old_*/
+# 部署 staging 目录（serve.mjs 用，跑 node scripts/sync-build.mjs 可重新生成）
+web/
 
 # Vite 加载配置时 esbuild 转译出的临时文件
 # 正常跑完会自动删；进程被 Ctrl+C / 崩溃打断时会残留

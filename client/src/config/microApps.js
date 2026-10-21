@@ -6,7 +6,9 @@ export const microApps = [
     key: 'idle',
     name: 'idle-market',
     title: '闲置市场',
-    entry: '//127.0.0.1:4200',
+    // entry 是「同源相对路径」，本地 dev 下由 MicroAppHost 换成 devUrl（子应用 dev 跑在 4200），
+    // 公网部署下解析成当前域名 + /idle-app/（子应用构建产物由 serve.mjs 同源托管）。
+    entry: '/idle-app/',
     devUrl: 'http://127.0.0.1:4200',
     route: '/m/idle',
     enabled: true,

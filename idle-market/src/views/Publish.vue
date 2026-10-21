@@ -37,6 +37,7 @@
                   <el-icon :size="12"><Close /></el-icon>
                 </span>
                 <span v-if="i === 0" class="first">封面</span>
+                <span v-if="img.uploading" class="up">上传中…</span>
               </div>
 
               <label v-if="images.length < 6" class="add">
@@ -52,7 +53,9 @@
                 />
               </label>
             </div>
-            <div class="tip">支持 JPG / PNG / WebP，单张 ≤ 5MB，最多 6 张</div>
+            <div class="tip">
+              支持 JPG / PNG / WebP，单张 ≤ 5MB，最多 6 张（已选 {{ totalMB }}MB）
+            </div>
           </div>
         </div>
 
@@ -177,12 +180,12 @@ import { ref, reactive, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { Plus, Close, Shop, InfoFilled } from '@element-plus/icons-vue';
-import { cats, saveItem, nextId } from '@/store';
+import { cats, conds, ways } from '@/store';
+import { api, isLogin } from '@/api';
 
 const router = useRouter();
-
-const conds = ['全新', '几乎全新', '九成新', '八成新', '七成新', '较旧'];
-const ways = ['自提', '面交', '快递'];
+const images = ref([]); // { uid, file, url, uploading }
+const submitting = ref(false);
 
 const f = reactive({
   title: '',
@@ -194,14 +197,12 @@ const f = reactive({
   desc: ''
 });
 
-const images = ref([]);
-const submitting = ref(false);
-
 const pickup = computed(() => f.ways.includes('自提') || f.ways.includes('面交'));
 
-const totalSize = computed(() =>
-  images.value.reduce((s, i) => s + Math.round((i.url.length * 3) / 4), 0)
-);
+// 已选图片的总字节数（换 Tip 文案用得上；单张上限已经在 onPick 里拦了）
+const totalSize = computed(() => images.value.reduce((s, i) => s + (i.file ? i.file.size : 0), 0));
+const totalMB = computed(() => (totalSize.value / 1024 / 1024).toFixed(1));
+const uploading = computed(() => images.value.some((i) => i.uploading));
 
 function clampPrice(v) {
   const n = Number(v);
@@ -224,7 +225,9 @@ function pickWay(w) {
   f.ways = [w];
 }
 
-function onPick(e) {
+// 选图即上传：本地用 blob URL 立刻出预览，同时把原文件传上去换回 /files/xxx。
+// 存库的全是短 URL —— 早先直接把 base64 塞进 MySQL 会被 TEXT 的 64KB 截住。
+async function onPick(e) {
   const files = Array.from(e.target.files || []);
   e.target.value = ''; // 允许重复选同一张
   if (!files.length) return;
@@ -235,26 +238,33 @@ function onPick(e) {
     return;
   }
 
-  files
-    .slice(0, room)
-    .forEach((raw) => {
-      if (!raw.type.startsWith('image/')) {
-        ElMessage.warning(`「${raw.name}」不是图片`);
-        return;
-      }
-      if (raw.size > 5 * 1024 * 1024) {
-        ElMessage.warning(`「${raw.name}」超过 5MB，换一张小点的`);
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => {
-        images.value.push({ uid: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, url: reader.result });
-      };
-      reader.readAsDataURL(raw);
-    });
+  for (const raw of files.slice(0, room)) {
+    if (!raw.type.startsWith('image/')) {
+      ElMessage.warning(`「${raw.name}」不是图片`);
+      continue;
+    }
+    if (raw.size > 5 * 1024 * 1024) {
+      ElMessage.warning(`「${raw.name}」超过 5MB，换一张小点的`);
+      continue;
+    }
+    const uid = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const item = { uid, url: URL.createObjectURL(raw), file: raw, uploading: true };
+    images.value.push(item);
+    try {
+      item.url = await api.upload(raw);
+    } catch (err) {
+      ElMessage.error(`「${raw.name}」上传失败：${err.message || '未知错误'}`);
+      images.value = images.value.filter((i) => i.uid !== uid);
+      URL.revokeObjectURL(item.url);
+      continue;
+    }
+    item.uploading = false;
+  }
 }
 
 function removeImg(uid) {
+  const hit = images.value.find((i) => i.uid === uid);
+  if (hit && hit.url.startsWith('blob:')) URL.revokeObjectURL(hit.url);
   images.value = images.value.filter((i) => i.uid !== uid);
 }
 
@@ -263,39 +273,33 @@ function reset() {
   images.value = [];
 }
 
-function submit() {
+async function submit() {
+  if (!isLogin()) return ElMessage.warning('发布前请先在主站登录');
+  if (uploading.value) return ElMessage.warning('图片还在上传，稍等一下');
   if (!images.value.length) return ElMessage.warning('至少上传 1 张商品图片');
   if (!f.title.trim()) return ElMessage.warning('请填写标题');
   if (!(f.price > 0)) return ElMessage.warning('请填写价格');
   if (f.desc.trim().length < 10) return ElMessage.warning('描述至少 10 个字，写清成色和入手渠道更容易卖出');
-  if (totalSize.value > 4 * 1024 * 1024) return warnSize();
 
   submitting.value = true;
-  const item = {
-    id: nextId(),
-    title: f.title.trim(),
-    price: f.price,
-    cat: f.cat,
-    cond: f.cond,
-    ways: f.ways,
-    place: pickup.value && f.place.trim() ? f.place.trim() : '待补充',
-    owner: '我（本地）',
-    desc: f.desc.trim(),
-    images: images.value.map((i) => i.url),
-    emoji: '🗂️',
-    mine: true,
-    createdAt: new Date().toISOString()
-  };
-
-  // TODO(P2)：换成 await api.post('/api/items', item)
-  saveItem(item);
-  submitting.value = false;
-  ElMessage.success('发布成功，已加入列表');
-  router.push('/list');
-}
-
-function warnSize() {
-  ElMessage.warning('图片总大小接近本地存储上限（约 4MB），少传几张或压缩后再试');
+  try {
+    const data = await api.post('/goods', {
+      title: f.title.trim(),
+      price: f.price,
+      cat: f.cat,
+      cond: f.cond,
+      ways: f.ways,
+      place: pickup.value && f.place.trim() ? f.place.trim() : '',
+      desc: f.desc.trim(),
+      images: images.value.map((i) => i.url)
+    });
+    ElMessage.success('发布成功');
+    router.push('/detail/' + data.id);
+  } catch (e) {
+    ElMessage.error(e.message || '发布失败');
+  } finally {
+    submitting.value = false;
+  }
 }
 
 function backToMain() {
@@ -307,19 +311,23 @@ function backToMain() {
 .sub-nav {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
   padding: 6px 2px 12px;
   font-size: 15px;
 }
 .sub-nav .s1 { font-weight: 700; }
-.sub-nav .s2 { color: #6b6480; }
-.sub-nav .sep { color: #c7c3d6; }
+.sub-nav .s2 { color: var(--im-fg-soft); }
+.sub-nav .sep { color: var(--im-fg-mute); }
 .sub-nav .cta { margin-left: auto; margin-right: 8px; }
 
 .tb {
   max-width: 720px;
-  --line: rgba(124, 58, 237, 0.22);
-  --brand: #7c3aed;
+  /* 局部控件变量：边框色 --line 固定跟随主题（深色下要换成浅描边），
+     前景用的 --brand 取全局 --im-brand，这样导航高亮/价格/按钮文字统一一套亮暗值 */
+  --line: var(--im-line-2);
+  --brand: var(--im-brand);
+  --brand-soft: var(--im-brand-soft);
 }
 
 h2 { font-size: 20px; margin: 4px 0 0; }
@@ -332,7 +340,7 @@ h2 { font-size: 20px; margin: 4px 0 0; }
   padding: 11px 13px;
   font-size: 13px;
   line-height: 1.5;
-  color: #4b4560;
+  color: var(--im-fg-soft);
   background: rgba(124, 58, 237, 0.05);
   border: 1px solid rgba(124, 58, 237, 0.12);
   border-radius: 12px;
@@ -353,10 +361,10 @@ h2 { font-size: 20px; margin: 4px 0 0; }
   padding-top: 12px;
   text-align: right;
   font-size: 13.5px;
-  color: #4b4560;
+  color: var(--im-fg-soft);
   line-height: 20px;
 }
-.lab i { color: #f04438; font-style: normal; margin-right: 4px; }
+.lab i { color: var(--im-danger); font-style: normal; margin-right: 4px; }
 .ctl { min-width: 0; }
 
 /* 统一控件：44px 高、12px 圆角、紫色聚焦 */
@@ -369,7 +377,7 @@ h2 { font-size: 20px; margin: 4px 0 0; }
 }
 .tb :deep(.el-input__wrapper:hover) { box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.45) inset; }
 .tb :deep(.el-input__wrapper.is-focus) { box-shadow: 0 0 0 1.5px var(--brand) inset; }
-.tb :deep(.el-input.is-disabled .el-input__wrapper) { background: #f7f6fb; box-shadow: 0 0 0 1px #ece9f4 inset; }
+.tb :deep(.el-input.is-disabled .el-input__wrapper) { background: var(--im-tint); box-shadow: 0 0 0 1px var(--im-line) inset; }
 .tb :deep(.el-textarea__inner) {
   min-height: 104px;
   line-height: 1.65;
@@ -388,36 +396,36 @@ h2 { font-size: 20px; margin: 4px 0 0; }
   border: 1px solid var(--line);
   border-radius: 12px;
   overflow: hidden;
-  background: #fff;
+  background: var(--im-surface);
   transition: 0.18s;
 }
 .stepper:focus-within { border-color: var(--brand); }
 .step {
   width: 40px;
   border: 0;
-  background: #f8f7fc;
-  color: #5b5480;
+  background: var(--im-tint);
+  color: var(--im-fg-soft);
   font-size: 17px;
   cursor: pointer;
   transition: 0.15s;
 }
-.step + .step { border-left: 1px solid #efeaf9; }
+.step + .step { border-left: 1px solid var(--im-line); }
 .step:hover:not(:disabled) { background: rgba(124, 58, 237, 0.1); color: var(--brand); }
-.step:disabled { color: #c3bed4; cursor: not-allowed; }
+.step:disabled { color: var(--im-fg-mute); cursor: not-allowed; }
 .num {
   flex: 1;
   min-width: 0;
   border: 0;
-  border-left: 1px solid #efeaf9;
-  border-right: 1px solid #efeaf9;
+  border-left: 1px solid var(--im-line);
+  border-right: 1px solid var(--im-line);
   outline: none;
   text-align: center;
   font-size: 15px;
   font-weight: 700;
-  color: #221f33;
+  color: var(--im-fg);
   background: transparent;
 }
-.unit { font-size: 13px; color: #8b84a3; }
+.unit { font-size: 13px; color: var(--im-fg-mute); }
 
 /* 成色：分段选择，选中整格高亮 */
 .seg {
@@ -431,14 +439,14 @@ h2 { font-size: 20px; margin: 4px 0 0; }
   padding: 0 2px;
   border-radius: 10px;
   border: 1px solid var(--line);
-  background: #fff;
-  color: #4b4560;
+  background: var(--im-surface);
+  color: var(--im-fg-soft);
   font-size: 12.5px;
   white-space: nowrap;
   cursor: pointer;
   transition: 0.16s;
 }
-.seg-i:hover { border-color: rgba(124, 58, 237, 0.55); color: var(--brand); }
+.seg-i:hover { border-color: var(--brand-soft); color: var(--brand); }
 .seg-i.on {
   border-color: transparent;
   background: linear-gradient(135deg, #7c3aed, #9333ea);
@@ -454,8 +462,8 @@ h2 { font-size: 20px; margin: 4px 0 0; }
   height: 44px;
   border-radius: 12px;
   border: 1px solid var(--line);
-  background: #fff;
-  color: #4b4560;
+  background: var(--im-surface);
+  color: var(--im-fg-soft);
   font-size: 13.5px;
   display: flex;
   align-items: center;
@@ -468,10 +476,10 @@ h2 { font-size: 20px; margin: 4px 0 0; }
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #cfcae0;
+  background: var(--im-dot);
   transition: 0.16s;
 }
-.way:hover { border-color: rgba(124, 58, 237, 0.5); }
+.way:hover { border-color: var(--brand-soft); }
 .way.on {
   border-color: var(--brand);
   background: rgba(124, 58, 237, 0.08);
@@ -494,7 +502,7 @@ h2 { font-size: 20px; margin: 4px 0 0; }
   height: 104px;
   border-radius: 14px;
   overflow: hidden;
-  border: 1px solid rgba(124, 58, 237, 0.18);
+  border: 1px solid var(--im-line-2);
 }
 .thumb-img { width: 100%; height: 100%; }
 .thumb :deep(.el-image__inner) { display: block; }
@@ -514,13 +522,25 @@ h2 { font-size: 20px; margin: 4px 0 0; }
   transition: 0.16s;
 }
 .thumb .del:hover { background: #ef4444; }
+/* 上传中的遮罩：图还没到后端就别让它看起来像已就绪 */
+.thumb .up {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #fff;
+  background: rgba(34, 31, 51, 0.45);
+  backdrop-filter: blur(2px);
+}
 
 .add {
   width: 104px;
   height: 104px;
   border: 1.5px dashed rgba(124, 58, 237, 0.45);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--im-surface);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -531,7 +551,7 @@ h2 { font-size: 20px; margin: 4px 0 0; }
 }
 .add:hover {
   border-color: var(--brand);
-  background: rgba(124, 58, 237, 0.06);
+  background: var(--im-tint);
   transform: translateY(-1px);
 }
 .add .plus {
@@ -544,9 +564,9 @@ h2 { font-size: 20px; margin: 4px 0 0; }
   align-items: center;
   justify-content: center;
 }
-.add .t { font-size: 13px; font-weight: 600; color: #5b3f9e; }
-.add .c { font-size: 11.5px; color: #8b84a3; }
-.tip { margin-top: 9px; font-size: 12px; color: #8b84a3; line-height: 1.5; }
+.add .t { font-size: 13px; font-weight: 600; color: var(--im-fg); }
+.add .c { font-size: 11.5px; color: var(--im-fg-mute); }
+.tip { margin-top: 9px; font-size: 12px; color: var(--im-fg-mute); line-height: 1.5; }
 
 /* 底部按钮 */
 .actions { display: flex; gap: 10px; }
@@ -561,11 +581,11 @@ h2 { font-size: 20px; margin: 4px 0 0; }
 .btn-main:focus { background: linear-gradient(135deg, #7338e6, #8b2fe0); border-color: transparent; }
 .btn-ghost {
   flex: 0 0 100px;
-  color: #5b5480;
-  background: #fff;
+  color: var(--im-fg-soft);
+  background: var(--im-surface);
   border-color: var(--line);
 }
-.btn-ghost:hover { color: #4b4560; border-color: rgba(124, 58, 237, 0.45); background: #fff; }
+.btn-ghost:hover { color: var(--im-fg-soft); border-color: var(--brand-soft); background: var(--im-surface); }
 
 @media (max-width: 900px) {
   .sub-nav { font-size: 14px; flex-wrap: wrap; }

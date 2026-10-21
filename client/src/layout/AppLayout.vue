@@ -14,7 +14,7 @@
             <span class="nav-item" :class="{ active: activeModule === m.key }">
               <el-icon><component :is="m.icon" /></el-icon>
               <span>{{ m.name }}</span>
-              <span v-if="ui.unread" class="nav-dot">{{ unreadText }}</span>
+              <span v-if="hasBadge(m) && ui.unread" class="nav-dot">{{ unreadText }}</span>
               <el-icon :size="12"><ArrowDown /></el-icon>
             </span>
             <template #dropdown>
@@ -41,6 +41,7 @@
           <router-link v-else :to="m.path" class="nav-item" :class="{ active: activeModule === m.key }">
             <el-icon><component :is="m.icon" /></el-icon>
             <span>{{ m.name }}</span>
+            <span v-if="m.key === 'friends' && friendBadge" class="nav-dot">{{ friendBadgeText }}</span>
           </router-link>
         </template>
 
@@ -95,9 +96,17 @@
       </div>
     </el-header>
 
-    <el-main class="main">
+    <el-main class="main" :class="{ 'has-foot': isMePage }">
       <!-- 内容限宽居中：宽屏不散、窄屏自适应 -->
       <div class="wrap">
+        <!-- 二级页返回：有来路就回上一页（浏览器的滚动位置也一起还原），
+             直接打开链接则落到路由 meta.backTo。哪些页面显示由 meta 决定，
+             页面自己不用再写返回按钮（已在页面内自带返回的页面不加这个 meta）。 -->
+        <button v-if="route.meta.backTo" type="button" class="back" @click="goBack">
+          <el-icon :size="14"><ArrowLeft /></el-icon>
+          返回
+        </button>
+
         <!-- 错误边界包住路由出口：页面崩了降级成提示卡，不会把整个应用卸成白屏 -->
         <!-- 筛选状态走 ui store（AppLayout 与 Tools 共享），不再逐层透传 prop -->
         <ErrorBoundary>
@@ -105,13 +114,14 @@
             <component :is="Component" />
           </router-view>
         </ErrorBoundary>
-
-        <footer class="foot">
-          <span>© 2026 校园集 CampusHub · 校园生活一站式</span>
-          <el-link type="primary" :underline="false" @click="$router.push('/about')">关于</el-link>
-        </footer>
       </div>
     </el-main>
+
+    <!-- 版权栏：只在「我的」页出现，固定在视口底部（手机端落在 tabbar 上方） -->
+    <footer v-if="isMePage" class="foot">
+      <span>© 2026 校园集 CampusHub · 校园生活一站式</span>
+      <el-link type="primary" :underline="false" @click="$router.push('/about')">关于</el-link>
+    </footer>
 
     <!-- 回到顶部：固定右下角悬浮按钮，翻过一屏才冒出来 -->
     <transition name="fab">
@@ -133,6 +143,7 @@
         <span class="tab-ic">
           <el-icon :size="19"><component :is="m.icon" /></el-icon>
           <i v-if="m.key === 'me' && ui.unread" class="tab-dot">{{ unreadText }}</i>
+          <i v-else-if="m.key === 'friends' && friendBadge" class="tab-dot">{{ friendBadgeText }}</i>
         </span>
         <span>{{ m.name }}</span>
       </div>
@@ -143,7 +154,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Search, ArrowDown, Select, InfoFilled, Top } from '@element-plus/icons-vue';
+import { Search, ArrowDown, Select, InfoFilled, Top, ArrowLeft } from '@element-plus/icons-vue';
 import { modules } from '@/config/modules';
 import ErrorBoundary from '@/views/ErrorBoundary.vue';
 import { useUserStore } from '@/stores/user';
@@ -162,6 +173,8 @@ const keyword = computed({
   set: (v) => ui.setKeyword(v)
 });
 const showTop = ref(false);
+// 未读轮询定时器（AppLayout 常驻，卸载时清掉，避免泄漏）
+let pollTimer = null;
 
 // 移动端判定：切「紧凑头部 + 底部 tab」，不再把导航条挤成一团
 const isMobile = ref(false);
@@ -175,12 +188,23 @@ onMounted(() => {
   theme.apply();
   syncMobile();
   syncScroll();
+  // 登录态下拉后端未读计数，导航/底部 tab 红点才准（游客不请求）
+  ui.loadUnread();
+  ui.loadChatUnread();
+  ui.loadFriendRequests();
+  // 轮询：A 给 B 发消息 / 加好友，B 这边的红点要尽快亮起来（无 WebSocket，定时拉）
+  pollTimer = setInterval(() => {
+    ui.loadUnread();
+    ui.loadChatUnread();
+    ui.loadFriendRequests();
+  }, 7000);
   window.addEventListener('resize', syncMobile);
   window.addEventListener('scroll', syncScroll, { passive: true });
 });
 onBeforeUnmount(() => {
   window.removeEventListener('resize', syncMobile);
   window.removeEventListener('scroll', syncScroll);
+  if (pollTimer) clearInterval(pollTimer);
 });
 
 // 头像下拉复用「我的」子菜单（我的主页 / 退出登录），别再写一套
@@ -206,6 +230,15 @@ const tabItems = modules.filter((m) => m.key !== 'message');
 
 // 红点文案：太多就显示 99+
 const unreadText = computed(() => (ui.unread > 99 ? '99+' : String(ui.unread)));
+// 下拉模块（工具 / 我的）的标题红点：只有「子项里挂了 badge」的模块才显示。
+// 以前对所有带 children 的模块一律 v-if="ui.unread"，结果消息未读数被顶到了「工具」上。
+const hasBadge = (m) => (m.children || []).some((c) => c.badge);
+// 「好友」tab 的红点 = 私聊未读 + 待通过好友申请（社交类合并展示）
+const friendBadge = computed(() => ui.chatUnread + ui.friendReqCount);
+const friendBadgeText = computed(() => (friendBadge.value > 99 ? '99+' : String(friendBadge.value)));
+
+// 版权栏只在「我的」页固定显示，其他页面不出现
+const isMePage = computed(() => route.path === '/me');
 
 // 下拉标题本身不跳转：点「我的 / 工具」只展开菜单，跳到哪个页面由菜单里的子项决定。
 // （轨迹：早先给标题也挂了 router.push，结果没选菜单就先跳走了，已去掉）
@@ -260,7 +293,7 @@ function onNavCommand(key) {
     if (item.action === 'logout') {
       user.logout();
       ElMessage.success('已退出');
-      router.push('/');
+      router.push('/auth');
       return;
     }
 
@@ -276,6 +309,17 @@ function isCurrentChild(parent, child) {
   const cp = childPath(child);
   if (!cp) return false;
   return route.path === cp || route.fullPath.split('?')[0] === cp;
+}
+
+// 二级页返回：history 里记着来路就回上一页（路由会还原原来的滚动位置）；
+// 没有来路（直接从外链 / 刷新打开）就退到该页上级，别点了没反应
+function goBack() {
+  const from = window.history.state && window.history.state.back;
+  if (from) {
+    router.back();
+    return;
+  }
+  router.push(route.meta.backTo || '/');
 }
 
 function goHome() {
@@ -377,7 +421,7 @@ function toTop() {
 .search :deep(.el-input__wrapper) {
   border-radius: 999px;
   box-shadow: 0 0 0 1px var(--tb-border, rgba(124, 58, 237, 0.16));
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--tb-surface);
   transition: 0.25s;
 }
 .search :deep(.el-input__wrapper:hover) { box-shadow: 0 0 0 1px var(--tb-primary-ring, rgba(124, 58, 237, 0.3)); }
@@ -398,18 +442,50 @@ function toTop() {
 /* 宽屏统一限宽居中：首页 / 工具页 / 微应用都不会被拉成一整条 */
 .wrap { width: 100%; max-width: 1240px; margin: 0 auto; }
 
+/* —— 二级页返回：胶囊小按钮，悬停右移一点给出可点反馈 —— */
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  margin-bottom: 12px;
+  padding: 0 14px;
+  border: 1px solid var(--tb-border);
+  border-radius: 999px;
+  background: var(--tb-card);
+  color: var(--tb-sub);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.18s;
+}
+.back:hover {
+  color: var(--tb-primary);
+  border-color: var(--tb-primary);
+  transform: translateX(-2px);
+}
+
+/* —— 版权栏：只在「我的」页渲染，固定在视口底部 —— */
 .foot {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 90;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 14px;
   flex-wrap: wrap;
-  margin-top: 26px;
-  padding: 14px 4px 4px;
+  padding: 12px 4px calc(12px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--tb-border);
+  background: var(--tb-bar, rgba(255, 255, 255, 0.86));
+  backdrop-filter: blur(10px);
   color: var(--tb-sub);
   font-size: 12px;
 }
+/* 「我的」页留出版权栏的高度，内容不被盖住 */
+.main.has-foot { padding-bottom: 64px; }
 
 /* —— 回到顶部：固定右下角悬浮按钮 —— */
 .fab {
@@ -448,7 +524,7 @@ function toTop() {
   left: 0; right: 0; bottom: 0;
   z-index: 100;
   display: flex;
-  background: rgba(255, 255, 255, 0.94);
+  background: var(--tb-bar);
   backdrop-filter: blur(10px);
   border-top: 1px solid var(--tb-border);
   box-shadow: 0 -4px 18px rgba(80, 40, 160, 0.1);
@@ -476,7 +552,7 @@ function toTop() {
   height: 16px;
   padding: 0 4px;
   box-sizing: border-box;
-  border: 2px solid #fff;
+  border: 2px solid var(--tb-card);
   border-radius: 999px;
   background: #ef4444;
   color: #fff;
@@ -498,6 +574,9 @@ function toTop() {
   .tabbar { min-height: 56px; }
   .tab { font-size: 10px; padding: 6px 0; }
   .main { padding: 0 8px 68px; }
+  /* 版权栏落在底部 tabbar 上方，别和它叠在一起 */
+  .foot { bottom: var(--tb-tabbar-h, 56px); padding-block: 10px; }
+  .main.has-foot { padding-bottom: calc(var(--tb-tabbar-h, 56px) + 64px); }
   /* 悬浮按钮要落在 tabbar 之上，别被盖住 */
   .fab { right: 14px; bottom: 78px; width: 42px; height: 42px; border-radius: 14px; }
   .fab span { display: none; }

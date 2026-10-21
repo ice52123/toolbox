@@ -57,6 +57,6 @@ function clear() {
 
 <style lang="less" scoped>@import '@/styles/mixins.less';
 .ops { margin: 12px 0; display: flex; align-items: center; gap: 10px; }
-.msg.ok { color: #16a34a; }
-.msg.err { color: #dc2626; }
+.msg.ok { color: var(--tb-ok); }
+.msg.err { color: var(--el-color-danger); }
 </style>

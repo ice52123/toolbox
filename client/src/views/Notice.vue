@@ -41,10 +41,10 @@
 </template>
 
 <script setup>
-import { computed, useCssModule } from 'vue';
+import { computed, ref, onMounted, useCssModule } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue';
-import { notices } from '@/config/mockData';
+import request from '@/utils/request';
 // 共享原子类（CSS Modules）：s.card / s.row … 各页长得一样的外观都在这份里
 import shared from '@/styles/ui.module.less';
 
@@ -54,9 +54,19 @@ const s = { ...shared, ...useCssModule() };
 const route = useRoute();
 const router = useRouter();
 
-const cur = computed(() => notices.find((n) => n.id === route.params.id) || null);
+// 公告中心：列表 + 详情都读 MySQL 后端 /home/notices（详情按 id 在内存里取）
+const notices = ref([]);
+const cur = computed(() => notices.value.find((n) => n.id === route.params.id) || null);
 const list = () => router.push('/notice');
 const open = (id) => router.push('/notice/' + id);
+
+onMounted(async () => {
+  try {
+    notices.value = await request.get('/home/notices');
+  } catch (e) {
+    console.error('[ Notice ] 加载公告失败：', e);
+  }
+});
 </script>
 <style lang="less" module>@import '@/styles/mixins.less';
 /* 只放「本页特有」的样式；卡片外观吃 ui.module.css，别重复抄一遍 */

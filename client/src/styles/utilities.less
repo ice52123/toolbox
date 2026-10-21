@@ -260,10 +260,12 @@
   .cols-3();
 }
 
-/* —— 移动端：把「一行三块」压成竖排；工具卡整体缩一档 —— */
+/* —— 移动端：把「一行三块」压成竖排；工具卡整体缩一档 ——
+   单列同样要 minmax(0, 1fr)：否则 1fr 的下限还是内容 min-content，
+   卡片里的不换行长文本照样会把整列顶宽、右手边被裁（见 mixins.less .cols-3()） */
 @media (max-width: 1000px) {
   .tb-cols-3 {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 @media (max-width: 900px) {

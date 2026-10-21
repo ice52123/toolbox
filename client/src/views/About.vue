@@ -124,17 +124,23 @@
     <!-- ============ 本地启动 ============ -->
     <div class="tb-card run">
       <h3>本地启动</h3>
-      <pre class="code"># 主站（5173）
+      <pre class="code"># MySQL 数据目录固定用 data2（不要动 MySQL267 服务 / data\Data 旧库）
+F:\tools\mysql\bin\mysqld.exe --console --basedir=F:\tools\mysql --datadir=F:\tools\mysql\data2 --port=3306 --character-set-server=utf8mb4
+
+# Redis（可选，没装后端自动降级）
+F:\tools\Redis\redis-server.exe --port 6379
+
+# 后端（双轨并行，契约一致）
+node server/app.js        # MySQL 版 · 3201
+node server-mongo/app.js  # MongoDB 版 · 3202
+
+# 主站（5173）
 cd F:/web/Node/项目/toolbox/client
 node node_modules/vite/bin/vite.js --port 5173
 
 # 闲置市场子应用（4200）—— 端口被占时 vite 会退到 4201，但宿主写死连 4200，务必复用 4200
 cd F:/web/Node/项目/toolbox/idle-market
-node node_modules/vite/bin/vite.js --port 4200
-
-# 后端（双轨并行，契约一致）
-node server/app.js        # MySQL 版 · 3201
-node server-mongo/app.js  # MongoDB 版 · 3202</pre>
+node node_modules/vite/bin/vite.js --port 4200</pre>
     </div>
 
     <div class="tb-card go">
@@ -200,7 +206,7 @@ const doneApis = [
 ];
 const mongoMissing = ['POST /api/user/avatar', 'POST /api/user/sms-login', 'POST /api/user/quick-login', 'POST /api/user/reset-password'];
 const todos = [
-  'MySQL 权限没修好（F:\\tools\\mysql\\data\\Data），net start MySQL267 报错误 5，3201 起库相关接口会 500',
+  'MySQL 数据固定在 data2 目录（root/admin123）；MySQL267 服务与 data\\Data 旧库已弃用，root 服务权限问题用「命令行直启 data2」绕开',
   '前端 18 个页面现在仍由 mockData.js 驱动，除登录/头像外没接后端',
   'ToolPlaceholder.vue 已成孤儿（全项目无人 import），可当模板参考或删掉',
   '支付沙箱 + 回调 + 退款售后 + 投诉工单：本轮明确不做',

@@ -139,7 +139,7 @@ const phoneOk = computed(() => /^1[3-9]\d{9}$/.test(props.phone));
 
   /* 只标红文字，别整块变色，否则提示行会把下面内容顶得忽上忽下 */
   &.bad {
-    color: #f43f5e;
+    color: var(--tb-danger);
   }
 }
 .tip {

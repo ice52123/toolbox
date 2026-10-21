@@ -14,6 +14,7 @@ export const modules = [
   },
   { key: 'community', name: '校园社区', icon: 'ChatDotRound', path: '/community' },
   { key: 'idle', name: '闲置市场', icon: 'Shop', path: '/m/idle' },
+  { key: 'friends', name: '好友', icon: 'Connection', path: '/friends' },
   {
     key: 'me',
     name: '我的',

@@ -1,10 +1,53 @@
 * { box-sizing: border-box; }
 
+/* 文字色靠变量走，不要写死：内嵌时主站已经挂了 html.dark，
+   子应用跟着切，深色页面上才是同一个对比度 */
+:root {
+  --im-fg: #221f33;
+  --im-fg-soft: #6b6480;
+  /* 弱化文字：原 #a7a1b5 在浅面层上只有 2.46:1，压到 –fg-soft 与 –fg 之间 */
+  --im-fg-mute: #736c84;
+  --im-pill: rgba(124, 58, 237, 0.08);
+  /* 面层：承载文字的容器底色必须跟主题走，
+     否则深色下「浅底 + 浅字」直接糊成一片（List 卡片/Publish 控件都栽在这） */
+  --im-bar-bg: rgba(255, 255, 255, 0.72);
+  --im-surface: rgba(255, 255, 255, 0.82);
+  --im-surface-2: linear-gradient(135deg, #f3f0ff, #eef6ff);
+  --im-line: rgba(124, 58, 237, 0.14);
+  --im-line-2: rgba(124, 58, 237, 0.18);
+  --im-tint: rgba(124, 58, 237, 0.05);
+  /* 品牌色当「文字/图标」色时不能直接用 #7c3aed —— 深底上对比度掉到 2 左右。
+     这里单独出一套可当前景用的品牌色，边框类仍走 --im-line-* */
+  --im-brand: #7c3aed;
+  --im-brand-soft: rgba(124, 58, 237, 0.5);
+  /* 必填星号：原 #f04438 在浅面层上 3.70:1，压暗到 #d92d20 → 4.76:1 */
+  --im-danger: #d92d20;
+  --im-dot: #cfcae0;
+}
+html.dark {
+  --im-fg: #edebf7;
+  --im-fg-soft: rgba(237, 239, 247, 0.82);
+  /* .55 白在深面层上只有 4.48:1（差一点点），提到 .62 → 5.36:1 */
+  --im-fg-mute: rgba(237, 239, 247, 0.62);
+  --im-pill: rgba(255, 255, 255, 0.14);
+  --im-bar-bg: rgba(28, 24, 48, 0.72);
+  --im-surface: rgba(255, 255, 255, 0.08);
+  --im-surface-2: linear-gradient(135deg, #332c57, #241f3d);
+  --im-line: rgba(255, 255, 255, 0.16);
+  --im-line-2: rgba(255, 255, 255, 0.22);
+  --im-tint: rgba(255, 255, 255, 0.06);
+  /* 深色下品牌色整体提亮到 violet-300，保持和图底的反差 */
+  --im-brand: #c7b9ff;
+  --im-brand-soft: rgba(199, 185, 255, 0.5);
+  --im-danger: #fda4af;
+  --im-dot: rgba(255, 255, 255, 0.4);
+}
+
 /* 样式收窄到自身容器 .im，避免内嵌时用 body 等全局选择器污染主应用 toolbox */
 .im {
   min-height: 100%;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-  color: #221f33;
+  color: var(--im-fg);
 }
 
 /* 仅当独立运行（直接打开 4200）时才给 body 上背景，内嵌时由主应用接管 */

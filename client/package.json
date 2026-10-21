@@ -12,7 +12,9 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",
+    "@tencent-ai/workbuddy-cloud-sdk": "^0.1.2-dev.1b37f73.202609222026",
     "axios": "^1.7.7",
+    "element-china-area-data": "^6.1.0",
     "element-plus": "^2.8.4",
     "less": "^4.9.1",
     "pdf-lib": "^1.17.1",

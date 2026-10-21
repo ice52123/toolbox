@@ -27,12 +27,20 @@
   --tb-warn-soft: rgba(245, 158, 11, 0.16);
   --tb-mute: #8b85a3;
   --tb-mute-soft: rgba(139, 133, 163, 0.14);
+  /* 危险操作文字（退出登录 / 取消订单）：浅底上要够深，深色底上要够亮 */
+  --tb-danger: #e11d48;
 
   /* —— 文字 / 背景 —— */
   --tb-text: #221f33;
   --tb-sub: #6b6480;
   --tb-card: rgba(255, 255, 255, 0.72);
   --tb-surface: rgba(255, 255, 255, 0.72); /* 输入框、头像等比表面色 */
+  /* 固定吸底栏（移动端底部 tab）：要比卡片更实一点，否则滑过内容会透出来。
+     ⚠ 这个值必须跟主题走 —— 以前写死 rgba(255,255,255,.94)，深色下 = 浅底栏 + 浅色 --tb-sub 文字 */
+  --tb-bar: rgba(255, 255, 255, 0.94);
+  /* 分类胶囊、筛选 pill 这类「实心小按钮」的底：深色下必须压暗，
+     否则浅底 + 深色模式变亮的 --tb-sub 正文色 → 字看不见 */
+  --tb-pill: rgba(255, 255, 255, 0.7);
   --tb-gradient-text: linear-gradient(120deg, #7c3aed, #ec4899 45%, #0ea5e9);
 
   /* —— 描边 / 分隔线 —— */
@@ -88,11 +96,14 @@ html.dark {
   --tb-warn-soft: rgba(251, 191, 36, 0.2);
   --tb-mute: #a9a6c0;
   --tb-mute-soft: rgba(169, 166, 192, 0.2);
+  --tb-danger: #fb7185;
 
   --tb-text: #eef0f7;
   --tb-sub: #a9a6c0;
   --tb-card: rgba(23, 27, 46, 0.55);
   --tb-surface: rgba(255, 255, 255, 0.06);
+  --tb-bar: rgba(18, 20, 36, 0.92);
+  --tb-pill: rgba(255, 255, 255, 0.09);
 
   --tb-line: rgba(148, 130, 255, 0.22);
   --tb-line-soft: rgba(148, 130, 255, 0.14);

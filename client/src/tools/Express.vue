@@ -65,7 +65,7 @@ function query() {
 .row :deep(.el-input) { flex: 1; min-width: 0; }
 .top { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
 .nm { font-size: 14px; font-weight: 600; }
-.no { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; color: #94a3b8; }
+.no { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; color: var(--tb-sub); }
 .tl { padding-left: 4px; }
-.empty { padding: 16px 0; text-align: center; color: #94a3b8; font-size: 13px; }
+.empty { padding: 16px 0; text-align: center; color: var(--tb-sub); font-size: 13px; }
 </style>

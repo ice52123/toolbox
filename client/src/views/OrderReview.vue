@@ -72,16 +72,19 @@
       </div>
     </template>
 
-    <el-empty v-else description="找不到这张订单" />
+    <!-- 拉不到表单时把后端给的原因说出来（已评价的上面那条分支已经渲染了摘要卡） -->
+    <el-empty v-else :description="loadErr || '找不到这张订单'">
+      <el-button type="primary" plain @click="router.push('/orders')">返回我的订单</el-button>
+    </el-empty>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, useCssModule } from 'vue';
+import { ref, reactive, computed, onMounted, watch, useCssModule } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ArrowLeft } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
-import { orders as mockOrders, reviewDims, reviewTags } from '@/config/mockData';
+import request from '@/utils/request';
 // 共享原子类（CSS Modules）：s.card / s.row … 各页长得一样的外观都在这份里
 import shared from '@/styles/ui.module.less';
 
@@ -90,11 +93,16 @@ const s = { ...shared, ...useCssModule() };
 
 const route = useRoute();
 const router = useRouter();
-// 跟订单详情同一个对象：提交后详情页的「已评价」立刻就能看到
-const o = computed(() => mockOrders.find((x) => x.id === route.params.id) || null);
+// 订单摘要 + 评价维度/标签全部来自后端 /orders/:id/review-form
+const o = ref(null);
+const reviewDims = ref([]);
+const reviewTags = ref([]);
+// 拉不到表单时的真实原因（已评价走 o.reviewed 分支，这里只放「其他失败」的原因）
+const loadErr = ref('');
 
 const score = ref(0);
-const dims = reactive({ desc: 0, attitude: 0, logistics: 0 });
+// 分项评分按后端返回的维度动态建键（后端默认 desc/attitude/logistics 三项）
+const dims = reactive({});
 const pickTags = ref([]);
 const text = ref('');
 
@@ -108,14 +116,60 @@ function toggleTag(t) {
   else pickTags.value.push(t);
 }
 
-function submit() {
-  // 写回订单对象（mock 数组里的那一份），订单详情 / 消息页读到的都是它
-  o.value.reviewed = true;
-  o.value.review = { score: score.value, tags: [...pickTags.value], text: text.value.trim() };
-  ElMessage.success('评价已提交，20 校园积分已到账');
-  // replace：评价完不该再留一个「提交评价」的历史记录能后退回去
-  router.replace(`/order/${o.value.id}`);
+async function load() {
+  // 先把上一轮的结果清掉：路由 id 变了还留着旧数据，页面会短暂显示上一张单的内容
+  o.value = null;
+  loadErr.value = '';
+  try {
+    const { order, dims: dimList, tags } = await request.get('/orders/' + route.params.id + '/review-form');
+    o.value = { id: order.id, title: order.title, price: order.price, reviewed: false };
+    reviewDims.value = dimList || [];
+    reviewTags.value = tags || [];
+    // 按后端维度动态初始化分项评分，模板 el-rate 走 dims[d.key]
+    (dimList || []).forEach((d) => {
+      if (dims[d.key] == null) dims[d.key] = 0;
+    });
+  } catch (e) {
+    // 拉不到评价表单不等于「订单不存在」。后端在这几种情况会拒绝：
+    //   已评价过 / 订单还没完成 / 不是自己买的单 / 单号不存在
+    // 之前一律当成「找不到这张订单」，用户看到的是空白页 + 误导性文案，
+    // 返回上一页又看到一张好好的订单 —— 前后自相矛盾。
+    // 现在：已评价 → 展示摘要 + 「已评价」态；其余 → 把后端的真实原因显示出来。
+    const msg = e?.message || '';
+    o.value = null;
+    if (msg.includes('已评价')) {
+      try {
+        const { order } = await request.get('/orders/' + route.params.id);
+        o.value = { id: order.id, title: order.title, price: order.price, reviewed: true };
+      } catch (e2) {
+        loadErr.value = e2?.message || msg;
+      }
+    } else {
+      loadErr.value = msg;
+    }
+    console.error('[ OrderReview ] 加载失败：', e);
+  }
 }
+
+async function submit() {
+  try {
+    await request.post('/orders/' + o.value.id + '/review', {
+      ratings: { ...dims },
+      tags: [...pickTags.value],
+      text: text.value.trim()
+    });
+    o.value.reviewed = true;
+    ElMessage.success('评价已提交，20 校园积分已到账');
+    // replace：评价完不该再留一个「提交评价」的历史记录能后退回去
+    router.replace(`/order/${o.value.id}`);
+  } catch (e) {
+    ElMessage.error(e?.message || '评价失败');
+  }
+}
+
+onMounted(load);
+// 同一路由内换单号（从别的入口点进来）时重新拉，别留着上一张单的内容
+watch(() => route.params.id, load);
 </script>
 
 <style lang="less" module>@import '@/styles/mixins.less';

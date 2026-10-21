@@ -190,3 +190,29 @@ order_reviews(id, order_id, user_id, ratings, tags, text, created_at)
   不修好写完也跑不通。
 - Mongo 版：`mongodb://127.0.0.1:27017/toolbox`，8.2.12 已装。
 - 前端 axios 实例在 `client/src/utils/request.js`，只挂了 `/api` 前缀，新接口直接加路径即可。
+
+---
+
+## 11. 校园切换（多租户）· 本轮新增
+
+> 用户决定：选校园 = **全局切换器（多租户）**，学校列表走后端接口。所有内容按 school 隔离。
+
+| # | 接口 | 鉴权 | 说明 |
+|---|---|---|---|
+| 37 | `GET /api/schools` | 否 | 学校列表，给顶部切换器下拉用（返回 id+name，标 isCurrent） |
+
+**数据模型**
+- `School` 集合（或常量）：`{ _id, name, code?, logo?, sort? }`
+- `User.school`：注册时选的「我的学校」（默认校区 + 个人标识，User 模型现有字段里没有，需加）
+- 内容集合（Post / Good / Notice / Order / ...）加 `school` 字段（存学校 `_id`）
+
+**隔离规则（已写进各 routes 文件头注释）**
+- 前端切换器选定后存 `localStorage.tb_school`，`request.js` 拦截器自动在请求带 `?school=<id>`
+- 后端所有列表接口按 `req.query.school` 过滤（**下推到 find**，不捞出应用层过滤）
+- 写操作（发帖 / 发布闲置 / 下单）把 `school` 存为「发布时所在校区」
+- 公告 `school` 为空 = 全站公告（对所有校区可见）
+
+**改动点（涉及之前的骨架）**
+- 需加 school 过滤/归属：`home/stats`、`notices`、`posts`(hot+列表)、`goods`(latest+列表)、`orders`、`messages`、`chats`、`favorite`、`profile` 的帖子列表
+- 前端需补三块：① 顶部切换器组件（下拉选校）② `stores/school.js`（当前校 + 切换动作）③ `request.js` 拦截器带 `school`
+- `User` 模型加 `school` 字段；注册接口（`server/routes/user.js` 的 register/login，Mongo 版 user 路由）要接收并落 `school`

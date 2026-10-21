@@ -127,9 +127,9 @@ function reset() { src.value = ''; out.value = ''; rawFile = null; }
 .row { margin: 12px 0; display: flex; align-items: center; gap: 10px; }
 .lab { font-size: 13px; color: var(--tb-sub, #64748b); }
 .num { width: 46px; text-align: right; font-family: ui-monospace, Menlo, monospace; }
-.dim { font-size: 12.5px; color: #94a3b8; }
-.tip { font-size: 12px; color: #94a3b8; line-height: 1.6; }
-.empty { padding: 16px 0; text-align: center; color: #94a3b8; font-size: 13px; }
+.dim { font-size: 12.5px; color: var(--tb-sub); }
+.tip { font-size: 12px; color: var(--tb-sub); line-height: 1.6; }
+.empty { padding: 16px 0; text-align: center; color: var(--tb-sub); font-size: 13px; }
 .stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -160,6 +160,6 @@ function reset() { src.value = ''; out.value = ''; rawFile = null; }
   display: block;
   margin: 0 auto;
 }
-.cap { display: block; margin-top: 4px; font-size: 12px; color: #94a3b8; }
+.cap { display: block; margin-top: 4px; font-size: 12px; color: var(--tb-sub); }
 .dl { grid-column: 1 / -1; text-align: center; }
 </style>

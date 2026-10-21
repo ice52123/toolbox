@@ -29,6 +29,9 @@ module.exports = {
   isAvailable: () => available,
   get: safe((k) => client.get(k)),
   set: safe((k, v, ttl) => ttl ? client.set(k, v, 'EX', ttl) : client.set(k, v)),
+  // 原子「不存在才设」：用于幂等锁。成功返回 'OK'，key 已存在或出错返回 null
+  setnx: safe((k, v, ttl) => client.set(k, v, 'EX', ttl, 'NX')),
+  del: safe((k) => client.del(k)),
   incr: safe((k) => client.incr(k)),
   expire: safe((k, ttl) => client.expire(k, ttl))
 };

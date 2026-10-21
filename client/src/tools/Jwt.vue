@@ -92,8 +92,8 @@ function json(o) { return JSON.stringify(o, null, 2); }
 .jwt-tool { max-width: 720px; }
 .row { margin: 12px 0; display: flex; align-items: center; gap: 10px; }
 .row :deep(.el-input) { flex: 1; min-width: 0; }
-.exp { margin-left: auto; font-size: 13px; color: #16a34a; }
-.exp.dead { color: #dc2626; }
+.exp { margin-left: auto; font-size: 13px; color: var(--tb-ok); }
+.exp.dead { color: var(--el-color-danger); }
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
 .blk {
@@ -129,5 +129,5 @@ pre {
   font-size: 12.5px;
   word-break: break-all;
 }
-.tip { margin-top: 14px; font-size: 12.5px; line-height: 1.7; color: #94a3b8; }
+.tip { margin-top: 14px; font-size: 12.5px; line-height: 1.7; color: var(--tb-sub); }
 </style>

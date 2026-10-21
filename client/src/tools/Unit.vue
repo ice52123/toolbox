@@ -127,12 +127,12 @@ conv();
   flex-wrap: wrap;
 }
 .src, .dst { font-size: 14px; color: var(--tb-sub, #64748b); }
-.ar { color: #94a3b8; }
+.ar { color: var(--tb-sub); }
 .res {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 18px;
   font-weight: 700;
-  color: #15803d;
+  color: var(--tb-ok);
 }
 .ref { margin-top: 16px; }
 .lab { font-size: 12.5px; color: var(--tb-sub, #64748b); margin-bottom: 6px; }

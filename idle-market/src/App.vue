@@ -7,6 +7,7 @@
       <nav class="im-nav">
         <router-link to="/list">逛一逛</router-link>
         <router-link to="/publish">发布闲置</router-link>
+        <router-link to="/orders">我的订单</router-link>
       </nav>
       <el-button size="small" @click="back">返回工具箱</el-button>
     </header>
@@ -28,22 +29,24 @@ function back() {
 </script>
 
 <style scoped>
-.im { min-height: 100vh; }
+/* inline-size 容器查询的基准：子应用被 qiankun 塞进窄容器时，
+   媒体查询按窗口算会失灵，这里让组件按自身宽度判断点 */
+.im { min-height: 100vh; container-type: inline-size; }
 .im-bar {
   display: flex;
   align-items: center;
   gap: 16px;
   padding: 12px 20px;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--im-bar-bg);
   backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(124, 58, 237, 0.14);
+  border-bottom: 1px solid var(--im-line);
   position: sticky;
   top: 0;
   z-index: 10;
 }
-.im-brand { font-weight: 800; font-size: 18px; }
+.im-brand { font-weight: 800; font-size: 18px; color: var(--im-fg); }
 .im-nav { display: flex; gap: 14px; margin-left: 8px; }
-.im-nav a { color: #6b6480; text-decoration: none; }
-.im-nav a.router-link-active { color: #7c3aed; font-weight: 600; }
+.im-nav a { color: var(--im-fg-soft); text-decoration: none; }
+.im-nav a.router-link-active { color: var(--im-brand); font-weight: 600; }
 .im-main { padding: 20px; }
 </style>

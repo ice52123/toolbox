@@ -10,7 +10,7 @@
           <p>1. 在 client/src/tools/ 下新建 <b>{{ tool?.todo || 'Xxx' }}.vue</b></p>
           <p>2. 把本占位组件换成你的逻辑（参考 JsonFormat.vue）</p>
           <p>3. 在 config/tools.js 把该工具的 comp 指向新组件、去掉 wip 标记</p>
-          <p v-if="tool?.needBackend" style="color:#dc2626">
+          <p v-if="tool?.needBackend" style="color: var(--el-color-danger)">
             注意：此工具需要后端（文件处理），后端路由骨架已在 server/routes/upload.js
           </p>
         </el-alert>

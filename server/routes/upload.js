@@ -50,6 +50,13 @@ router.post('/image', auth, upload.single('file'), async (req, res) => {
   }
 });
 
+// 原图直传（无 sharp）：闲置市场发布商品用它拿 /files/xxx，
+// 不走 /image 那条压缩链路 —— 那条依赖 sharp，本机没装会直接 fail。
+router.post('/raw', auth, upload.single('file'), (req, res) => {
+  if (!req.file) return fail(res, '请上传图片文件');
+  return ok(res, { url: '/files/' + req.file.filename }, '上传成功');
+});
+
 // PDF 处理：合并 / 拆分 / 压缩。骨架 TODO，依赖 pdf-lib
 router.post('/pdf', auth, upload.array('files', 20), async (req, res) => {
   try {
